@@ -13,7 +13,10 @@ def init_connection():
 
 supabase: Client = init_connection()
 
-# --- GENERACIÓN DE LOS 104 PARTIDOS ---
+    # --- GENERACIÓN DE LOS 104 PARTIDOS ---
+flag_ing = "\U0001F3F4\U000E0067\U000E0062\U000E0065\U000E006E\U000E0067\U000E007F"
+flag_sct = "\U0001F3F4\U000E0067\U000E0062\U000E0073\U000E0063\U000E0074\U000E007F"
+
 matches = [
     # --- JORNADA 1 ---
     {"id": 1, "fase": "Grupo A", "default_a": "🇲🇽 México", "default_b": "🇿🇦 Sudáfrica", "fecha_base": "2026-06-11 13:00:00"},
@@ -22,7 +25,7 @@ matches = [
     {"id": 4, "fase": "Grupo D", "default_a": "🇺🇸 USA", "default_b": "🇵🇾 Paraguay", "fecha_base": "2026-06-12 19:00:00"},
     {"id": 5, "fase": "Grupo B", "default_a": "🇶🇦 Catar", "default_b": "🇨🇭 Suiza", "fecha_base": "2026-06-13 13:00:00"},
     {"id": 6, "fase": "Grupo C", "default_a": "🇧🇷 Brasil", "default_b": "🇲🇦 Marruecos", "fecha_base": "2026-06-13 16:00:00"},
-    {"id": 7, "fase": "Grupo C", "default_a": "🇭🇹 Haití", "default_b": "🏴󠁧󠁢󠁳󠁣󠁴󠁿 Escocia", "fecha_base": "2026-06-13 19:00:00"},
+    {"id": 7, "fase": "Grupo C", "default_a": "🇭🇹 Haití", "default_b": f"{flag_sct} Escocia", "fecha_base": "2026-06-13 19:00:00"},
     {"id": 8, "fase": "Grupo D", "default_a": "🇦🇺 Australia", "default_b": "🇹🇷 Turquía", "fecha_base": "2026-06-13 22:00:00"},
     {"id": 9, "fase": "Grupo E", "default_a": "🇩🇪 Alemania", "default_b": "🇨🇼 Curazao", "fecha_base": "2026-06-14 11:00:00"},
     {"id": 10, "fase": "Grupo F", "default_a": "🇳🇱 Países Bajos", "default_b": "🇯🇵 Japón", "fecha_base": "2026-06-14 14:00:00"},
@@ -37,7 +40,7 @@ matches = [
     {"id": 19, "fase": "Grupo J", "default_a": "🇦🇷 Argentina", "default_b": "🇩🇿 Argelia", "fecha_base": "2026-06-16 19:00:00"},
     {"id": 20, "fase": "Grupo J", "default_a": "🇦🇹 Austria", "default_b": "🇯🇴 Jordania", "fecha_base": "2026-06-16 22:00:00"},
     {"id": 21, "fase": "Grupo K", "default_a": "🇵🇹 Portugal", "default_b": "🇨🇩 RD Congo", "fecha_base": "2026-06-17 11:00:00"},
-    {"id": 22, "fase": "Grupo L", "default_a": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra", "default_b": "🇭🇷 Croacia", "fecha_base": "2026-06-17 14:00:00"},
+    {"id": 22, "fase": "Grupo L", "default_a": f"{flag_ing} Inglaterra", "default_b": "🇭🇷 Croacia", "fecha_base": "2026-06-17 14:00:00"},
     {"id": 23, "fase": "Grupo L", "default_a": "🇬🇭 Ghana", "default_b": "🇵🇦 Panamá", "fecha_base": "2026-06-17 17:00:00"},
     {"id": 24, "fase": "Grupo K", "default_a": "🇺🇿 Uzbekistán", "default_b": "🇨🇴 Colombia", "fecha_base": "2026-06-17 20:00:00"},
 
@@ -47,7 +50,7 @@ matches = [
     {"id": 27, "fase": "Grupo B", "default_a": "🇨🇦 Canadá", "default_b": "🇶🇦 Catar", "fecha_base": "2026-06-18 16:00:00"},
     {"id": 28, "fase": "Grupo A", "default_a": "🇲🇽 México", "default_b": "🇰🇷 Corea del Sur", "fecha_base": "2026-06-18 19:00:00"},
     {"id": 29, "fase": "Grupo D", "default_a": "🇺🇸 USA", "default_b": "🇦🇺 Australia", "fecha_base": "2026-06-19 13:00:00"},
-    {"id": 30, "fase": "Grupo C", "default_a": "🏴󠁧󠁢󠁳󠁣󠁴󠁿 Escocia", "default_b": "🇲🇦 Marruecos", "fecha_base": "2026-06-19 16:00:00"},
+    {"id": 30, "fase": "Grupo C", "default_a": f"{flag_sct} Escocia", "default_b": "🇲🇦 Marruecos", "fecha_base": "2026-06-19 16:00:00"},
     {"id": 31, "fase": "Grupo C", "default_a": "🇧🇷 Brasil", "default_b": "🇭🇹 Haití", "fecha_base": "2026-06-19 18:30:00"},
     {"id": 32, "fase": "Grupo D", "default_a": "🇹🇷 Turquía", "default_b": "🇵🇾 Paraguay", "fecha_base": "2026-06-19 21:00:00"},
     {"id": 33, "fase": "Grupo F", "default_a": "🇳🇱 Países Bajos", "default_b": "🇸🇪 Suecia", "fecha_base": "2026-06-20 11:00:00"},
@@ -64,7 +67,7 @@ matches = [
     {"id": 44, "fase": "Grupo J", "default_a": "🇩🇿 Argelia", "default_b": "🇯🇴 Jordania", "fecha_base": "2026-06-22 22:00:00"},
     {"id": 45, "fase": "Grupo K", "default_a": "🇵🇹 Portugal", "default_b": "🇺🇿 Uzbekistán", "fecha_base": "2026-06-23 11:00:00"},
     {"id": 46, "fase": "Grupo K", "default_a": "🇨🇴 Colombia", "default_b": "🇨🇩 RD Congo", "fecha_base": "2026-06-23 14:00:00"},
-    {"id": 47, "fase": "Grupo L", "default_a": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra", "default_b": "🇬🇭 Ghana", "fecha_base": "2026-06-23 17:00:00"},
+    {"id": 47, "fase": "Grupo L", "default_a": f"{flag_ing} Inglaterra", "default_b": "🇬🇭 Ghana", "fecha_base": "2026-06-23 17:00:00"},
     {"id": 48, "fase": "Grupo L", "default_a": "🇭🇷 Croacia", "default_b": "🇵🇦 Panamá", "fecha_base": "2026-06-23 20:00:00"},
 
     # --- JORNADA 3 ---
@@ -72,7 +75,7 @@ matches = [
     {"id": 50, "fase": "Grupo A", "default_a": "🇿🇦 Sudáfrica", "default_b": "🇰🇷 Corea del Sur", "fecha_base": "2026-06-24 13:00:00"},
     {"id": 51, "fase": "Grupo B", "default_a": "🇨🇦 Canadá", "default_b": "🇨🇭 Suiza", "fecha_base": "2026-06-24 17:00:00"},
     {"id": 52, "fase": "Grupo B", "default_a": "🇧🇦 Bosnia y Herz.", "default_b": "🇶🇦 Catar", "fecha_base": "2026-06-24 17:00:00"},
-    {"id": 53, "fase": "Grupo C", "default_a": "🇧🇷 Brasil", "default_b": "🏴󠁧󠁢󠁳󠁣󠁴󠁿 Escocia", "fecha_base": "2026-06-25 13:00:00"},
+    {"id": 53, "fase": "Grupo C", "default_a": "🇧🇷 Brasil", "default_b": f"{flag_sct} Escocia", "fecha_base": "2026-06-25 13:00:00"},
     {"id": 54, "fase": "Grupo C", "default_a": "🇲🇦 Marruecos", "default_b": "🇭🇹 Haití", "fecha_base": "2026-06-25 13:00:00"},
     {"id": 55, "fase": "Grupo D", "default_a": "🇺🇸 USA", "default_b": "🇹🇷 Turquía", "fecha_base": "2026-06-25 17:00:00"},
     {"id": 56, "fase": "Grupo D", "default_a": "🇵🇾 Paraguay", "default_b": "🇦🇺 Australia", "fecha_base": "2026-06-25 17:00:00"},
@@ -90,10 +93,9 @@ matches = [
     {"id": 68, "fase": "Grupo J", "default_a": "🇩🇿 Argelia", "default_b": "🇦🇹 Austria", "fecha_base": "2026-06-28 17:00:00"},
     {"id": 69, "fase": "Grupo K", "default_a": "🇵🇹 Portugal", "default_b": "🇨🇴 Colombia", "fecha_base": "2026-06-29 13:00:00"},
     {"id": 70, "fase": "Grupo K", "default_a": "🇨🇩 RD Congo", "default_b": "🇺🇿 Uzbekistán", "fecha_base": "2026-06-29 13:00:00"},
-    {"id": 71, "fase": "Grupo L", "default_a": "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra", "default_b": "🇵🇦 Panamá", "fecha_base": "2026-06-29 17:00:00"},
+    {"id": 71, "fase": "Grupo L", "default_a": f"{flag_ing} Inglaterra", "default_b": "🇵🇦 Panamá", "fecha_base": "2026-06-29 17:00:00"},
     {"id": 72, "fase": "Grupo L", "default_a": "🇭🇷 Croacia", "default_b": "🇬🇭 Ghana", "fecha_base": "2026-06-29 17:00:00"}
 ]
-
 # --- FASE ELIMINATORIA (Generación dinámica con el diagrama exacto) ---
 fechas_16vos = ["2026-06-28", "2026-06-29", "2026-06-30", "2026-07-01", "2026-07-02", "2026-07-03"]
 for i in range(73, 89):
@@ -129,8 +131,15 @@ matches.append({"id": 103, "fase": "Tercer Lugar", "default_a": "Perdedor M101",
 matches.append({"id": 104, "fase": "FINAL", "default_a": "Ganador M101", "default_b": "Ganador M102", "fecha_base": "2026-07-19 18:00:00"})
 
 # Lista de equipos para Campeón Global
-lista_equipos = ["🇲🇽 México", "🇺🇸 USA", "🇨🇦 Canadá", "🇦🇷 Argentina", "🇧🇷 Brasil", "🇫🇷 Francia", "🇪🇸 España", "🇩🇪 Alemania", "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra", "🇵🇹 Portugal", "Otro"]
-
+lista_equipos = [
+    "🇲🇽 México", "🇺🇸 USA", "🇨🇦 Canadá", 
+    "🇦🇷 Argentina", "🇧🇷 Brasil", "🇺🇾 Uruguay", "🇨🇴 Colombia", "🇪🇨 Ecuador", "🇵🇾 Paraguay", "🇨🇱 Chile", "🇵🇪 Perú",
+    "🇫🇷 Francia", "🇪🇸 España", f"{flag_ing} Inglaterra", "🇵🇹 Portugal", "🇳🇱 Países Bajos", "🇧🇪 Bélgica", "🇩🇪 Alemania", "🇮🇹 Italia", "🇭🇷 Croacia", "🇨🇭 Suiza", f"{flag_sct} Escocia", "🇨🇿 Rep. Checa", "🇦🇹 Austria", "🇺🇦 Ucrania", "🇹🇷 Turquía",
+    "🇲🇦 Marruecos", "🇸🇳 Senegal", "🇳🇬 Nigeria", "🇪🇬 Egipto", "🇨🇮 Costa de Marfil", "🇩🇿 Argelia", "🇹🇳 Túnez", "🇨🇲 Camerún", "🇬🇭 Ghana", "🇲🇱 Mali",
+    "🇯🇵 Japón", "🇰🇷 Corea del Sur", "🇦🇺 Australia", "🇮🇷 Irán", "🇸🇦 Arabia Saudita", "🇶🇦 Catar", "🇺🇿 Uzbekistán", "🇮🇶 Irak",
+    "🇵🇦 Panamá", "🇨🇷 Costa Rica", "🇯🇲 Jamaica", "🇭🇹 Haití",
+    "🇳🇿 Nueva Zelanda", "Otro"
+]
 # --- FUNCIONES AUXILIARES ---
 def convertir_hora(fecha_base_str, timezone_destino):
     # Toma la hora base como la hora oficial de América Central y la convierte a la zona del usuario
