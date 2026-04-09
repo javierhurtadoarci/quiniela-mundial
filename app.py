@@ -103,7 +103,7 @@ else:
     
     # PANEL DE ADMIN: Solo visible si el correo es el del administrador
     # IMPORTANTE: Registra este correo de forma normal en la app, no pongas la contraseña en el código
-    es_admin = user_email == "admin@tuquiniela.com" # CAMBIA ESTO A TU CORREO REAL DE ADMIN
+    es_admin = user_email == "adam666.die@gmail.com" # CAMBIA ESTO A TU CORREO REAL DE ADMIN
     if es_admin:
         tabs.append("⚙️ Panel de Resultados (Admin)")
 
