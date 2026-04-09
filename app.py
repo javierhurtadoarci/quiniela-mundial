@@ -4,7 +4,7 @@ from supabase import create_client, Client
 import pytz
 from datetime import datetime
 
-st.set_page_config(page_title="Quiniela Mundial 2026", page_icon="🏆", layout="wide")
+st.set_page_config(page_title="Quiniela Mundial 2026 Los Arciniegas", page_icon="🏆", layout="wide")
 
 # --- CONEXIÓN A SUPABASE ---
 @st.cache_resource
@@ -17,7 +17,6 @@ supabase: Client = init_connection()
 flag_ing = "\U0001F3F4\U000E0067\U000E0062\U000E0065\U000E006E\U000E0067\U000E007F"
 flag_sct = "\U0001F3F4\U000E0067\U000E0062\U000E0073\U000E0063\U000E0074\U000E007F"
 
-# Diccionario exacto de los grupos del Mundial
 grupos_equipos = {
     "A": ["🇲🇽 México", "🇿🇦 Sudáfrica", "🇰🇷 Corea del Sur", "🇨🇿 Rep. Checa"],
     "B": ["🇨🇦 Canadá", "🇧🇦 Bosnia y Herz.", "🇶🇦 Catar", "🇨🇭 Suiza"],
@@ -33,7 +32,6 @@ grupos_equipos = {
     "L": [f"{flag_ing} Inglaterra", "🇭🇷 Croacia", "🇬🇭 Ghana", "🇵🇦 Panamá"]
 }
 
-# Mapa de choques en Dieciseisavos (Distribución lógica de los 12 grupos)
 llaves_32 = {
     73: ("A", "B"), 74: ("C", "D"), 75: ("E", "F"), 76: ("G", "H"),
     77: ("I", "J"), 78: ("K", "L"), 79: ("A", "C"), 80: ("B", "D"),
@@ -41,7 +39,6 @@ llaves_32 = {
     85: ("A", "E"), 86: ("B", "F"), 87: ("C", "G"), 88: ("D", "H")
 }
 
-# Lista completa combinada para fases finales y Campeón
 lista_equipos = [equipo for grupo in grupos_equipos.values() for equipo in grupo] + ["Otro"]
 
 # --- GENERACIÓN DE LOS 104 PARTIDOS ---
@@ -192,7 +189,15 @@ if st.session_state.user is None:
 # --- APLICACIÓN PRINCIPAL ---
 else:
     user_email = st.session_state.user.email
-    st.sidebar.success(f"Usuario: {user_email}")
+    
+    # Obtener el nombre de usuario de la base de datos para la barra lateral
+    try:
+        user_record = supabase.table('users').select('username').eq('email', user_email).execute().data
+        display_name = user_record[0]['username'] if user_record else user_email
+    except:
+        display_name = user_email
+        
+    st.sidebar.success(f"👤 Hola, {display_name}")
     if st.sidebar.button("Cerrar Sesión"):
         supabase.auth.sign_out()
         st.session_state.user = None
@@ -244,7 +249,8 @@ else:
                     
                     seleccion = st.radio(f"Gana M{m_id}", opciones, index=idx, key=f"p_{m_id}", horizontal=True, label_visibility="collapsed")
                     if st.button("Guardar Pronóstico", key=f"b_{m_id}"):
-                        supabase.table('predictions').upsert({"email": user_email, "match_id": m_id, "prediction": seleccion}).execute()
+                        data_pronostico = {"email": user_email, "match_id": m_id, "prediction": seleccion}
+                        supabase.table('predictions').upsert(data_pronostico, on_conflict="email,match_id").execute()
                         st.toast(f"M{m_id} Guardado", icon="✅")
                 st.divider()
 
@@ -273,31 +279,63 @@ else:
     # --- PESTAÑA 3: RANKING ---
     with app_tabs[2]:
         st.header("📊 Tabla de Posiciones")
-        if st.button("🔄 Actualizar Ranking"):
-            usuarios = pd.DataFrame(supabase.table('users').select('*').execute().data)
-            predicciones = pd.DataFrame(supabase.table('predictions').select('*').execute().data)
-            resultados = pd.DataFrame(supabase.table('results').select('*').execute().data)
-            campeones = pd.DataFrame(supabase.table('champion_predictions').select('*').execute().data)
+        if st.button("🔄 Actualizar Ranking", type="primary"):
+            # Obtener todos los usuarios registrados como base
+            usuarios_data = supabase.table('users').select('email', 'username').execute().data
+            
+            if not usuarios_data:
+                st.info("Aún no hay usuarios registrados.")
+            else:
+                usuarios = pd.DataFrame(usuarios_data)
+                usuarios['Total'] = 0  # Todos empiezan con 0 puntos
+                
+                # Cargar predicciones y resultados
+                preds_data = supabase.table('predictions').select('*').execute().data
+                res_data = supabase.table('results').select('*').execute().data
+                
+                # Calcular puntos por partidos si hay resultados
+                if preds_data and res_data:
+                    df_p = pd.DataFrame(preds_data)
+                    df_r = pd.DataFrame(res_data)
+                    df_r = df_r.dropna(subset=['real_result']) # Solo tomar partidos ya jugados
+                    
+                    if not df_r.empty:
+                        cruce = pd.merge(df_p, df_r[['match_id', 'real_result']], on='match_id', how='inner')
+                        cruce['puntos'] = cruce.apply(lambda x: 2 if x['prediction'] == x['real_result'] else 0, axis=1)
+                        pts_partidos = cruce.groupby('email')['puntos'].sum().reset_index()
+                        
+                        # Sumar puntos al total de los usuarios
+                        usuarios = pd.merge(usuarios, pts_partidos, on='email', how='left').fillna(0)
+                        usuarios['Total'] += usuarios['puntos']
+                        usuarios = usuarios.drop(columns=['puntos'])
 
-            if not usuarios.empty and not predicciones.empty and not resultados.empty:
-                df_cruce = pd.merge(predicciones, resultados[['match_id', 'real_result']], on='match_id', how='inner')
-                df_cruce['puntos_partidos'] = df_cruce.apply(lambda row: 2 if row['prediction'] == row['real_result'] else 0, axis=1)
-                puntos_por_user = df_cruce.groupby('email')['puntos_partidos'].sum().reset_index()
+                # Calcular puntos por campeón si ya terminó el torneo
+                if campeon_real:
+                    camps_data = supabase.table('champion_predictions').select('*').execute().data
+                    if camps_data:
+                        df_c = pd.DataFrame(camps_data)
+                        df_c['pts_camp'] = df_c['prediction'].apply(lambda x: 15 if x == campeon_real else 0)
+                        
+                        # Sumar puntos al total de los usuarios
+                        usuarios = pd.merge(usuarios, df_c[['email', 'pts_camp']], on='email', how='left').fillna(0)
+                        usuarios['Total'] += usuarios['pts_camp']
+                        usuarios = usuarios.drop(columns=['pts_camp'])
 
-                if campeon_real and not campeones.empty:
-                    campeones['puntos_campeon'] = campeones['prediction'].apply(lambda x: 15 if x == campeon_real else 0)
-                    puntos_por_user = pd.merge(puntos_por_user, campeones[['email', 'puntos_campeon']], on='email', how='left').fillna(0)
-                    puntos_por_user['Total'] = puntos_por_user['puntos_partidos'] + puntos_por_user['puntos_campeon']
-                else:
-                    puntos_por_user['Total'] = puntos_por_user['puntos_partidos']
-
-                ranking_final = pd.merge(usuarios[['email', 'username']], puntos_por_user, on='email', how='left').fillna(0)
-                ranking_final = ranking_final[['username', 'Total']].sort_values(by='Total', ascending=False).reset_index(drop=True)
+                # Formatear la tabla final para mostrar solo Nombre y Total
+                ranking_final = usuarios[['username', 'Total']].sort_values(by='Total', ascending=False).reset_index(drop=True)
                 ranking_final['Total'] = ranking_final['Total'].astype(int)
+                ranking_final.index += 1 # Que la lista empiece en el número 1
                 
                 st.dataframe(ranking_final, use_container_width=True)
-            else:
-                st.write("Aún no hay puntos suficientes para calcular el ranking.")
+                
+            st.divider()
+            st.subheader("👥 Usuarios Registrados (Admin View)")
+            if st.button("Ver lista de correos"):
+                try:
+                    df_usuarios = pd.DataFrame(usuarios_data)
+                    st.table(df_usuarios)
+                except Exception as e:
+                    st.error(f"Error al obtener la lista: {e}")
 
     # --- PESTAÑA 4: ADMIN (LLENADO INTELIGENTE DE LLAVES) ---
     if es_admin:
