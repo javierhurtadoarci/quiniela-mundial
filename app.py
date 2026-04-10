@@ -4,7 +4,7 @@ from supabase import create_client, Client
 import pytz
 from datetime import datetime
 
-st.set_page_config(page_title="Quiniela Mundial 2026 Los Arciniegas", page_icon="🏆", layout="wide")
+st.set_page_config(page_title="Quiniela Mundial 2026", page_icon="🏆", layout="wide")
 
 # --- CONEXIÓN A SUPABASE ---
 @st.cache_resource
@@ -39,7 +39,7 @@ llaves_32 = {
     85: ("A", "E"), 86: ("B", "F"), 87: ("C", "G"), 88: ("D", "H")
 }
 
-lista_equipos = [equipo for grupo in grupos_equipos.values() for equipo in grupo] + ["Otro"]
+lista_equipos = [equipo for grupo in grupos_equipos.values() for equipo in grupo] + ["Por definir", "Otro"]
 
 # --- GENERACIÓN DE LOS 104 PARTIDOS ---
 matches = [
@@ -127,7 +127,7 @@ fechas_16vos = ["2026-06-28", "2026-06-29", "2026-06-30", "2026-07-01", "2026-07
 for i in range(73, 89):
     matches.append({
         "id": i, "fase": "Dieciseisavos (32)", 
-        "default_a": "Clasificado " + llaves_32[i][0], "default_b": "Clasificado " + llaves_32[i][1], 
+        "default_a": "Clasificado", "default_b": "Clasificado", 
         "fecha_base": f"{fechas_16vos[(i - 73) % 6]} 18:00:00"
     })
 
@@ -164,15 +164,18 @@ if st.session_state.user is None:
     tab_login, tab_registro = st.tabs(["Ingresar", "Registrarse"])
     
     with tab_login:
-        email_login = st.text_input("Correo Electrónico", key="login_email")
-        pass_login = st.text_input("Contraseña", type="password", key="login_pass")
-        if st.button("Entrar"):
-            try:
-                res = supabase.auth.sign_in_with_password({"email": email_login, "password": pass_login})
-                st.session_state.user = res.user
-                st.rerun()
-            except:
-                st.error("Credenciales incorrectas.")
+        with st.form("form_login"):
+            email_login = st.text_input("Correo Electrónico")
+            pass_login = st.text_input("Contraseña", type="password")
+            submit_btn = st.form_submit_button("Entrar")
+            
+            if submit_btn:
+                try:
+                    res = supabase.auth.sign_in_with_password({"email": email_login, "password": pass_login})
+                    st.session_state.user = res.user
+                    st.rerun()
+                except:
+                    st.error("Credenciales incorrectas.")
 
     with tab_registro:
         email_reg = st.text_input("Correo", key="reg_email")
@@ -190,7 +193,6 @@ if st.session_state.user is None:
 else:
     user_email = st.session_state.user.email
     
-    # Obtener el nombre de usuario de la base de datos para la barra lateral
     try:
         user_record = supabase.table('users').select('username').eq('email', user_email).execute().data
         display_name = user_record[0]['username'] if user_record else user_email
@@ -215,7 +217,7 @@ else:
         oficiales = {}
         campeon_real = None
 
-    es_admin = user_email == "adam666.die@gmail.com" # <--- RECUERDA PONER AQUÍ TU CORREO DE ADMIN
+    es_admin = user_email == "admin@tuquiniela.com" # <--- RECUERDA PONER AQUÍ TU CORREO DE ADMIN
     tabs = ["📝 Pronósticos", "👑 Campeón (15 pts)", "📊 Ranking"]
     if es_admin:
         tabs.append("⚙️ Panel Admin")
@@ -252,12 +254,15 @@ else:
                         data_pronostico = {"email": user_email, "match_id": m_id, "prediction": seleccion}
                         supabase.table('predictions').upsert(data_pronostico, on_conflict="email,match_id").execute()
                         st.toast(f"M{m_id} Guardado", icon="✅")
+                        st.rerun()
                 st.divider()
 
     # --- PESTAÑA 2: CAMPEÓN ---
     with app_tabs[1]:
         st.header("👑 Predicción del Campeón")
-        st.write("Acierta al campeón del mundo y gana 15 puntos extra al final del torneo.")
+        
+        # Bloqueo después del M4
+        m4_cerrado = oficiales.get(4, {}).get('real_result') is not None
         
         try:
             mi_campeon_db = supabase.table('champion_predictions').select('prediction').eq('email', user_email).execute().data
@@ -268,76 +273,84 @@ else:
         if campeon_real:
             st.error(f"El torneo ha terminado. El campeón oficial es: **{campeon_real}**")
             st.info(f"Tu elección fue: {mi_campeon}")
+        elif m4_cerrado:
+            st.error("⛔ La selección de campeón se cerró al finalizar el Partido 4.")
+            st.info(f"Tu elección guardada es: **{mi_campeon}**")
         else:
+            st.write("Acierta al campeón del mundo y gana 15 puntos extra al final del torneo.")
             st.success(f"Tu selección actual: **{mi_campeon}**")
+            
             nuevo_campeon = st.selectbox("Selecciona tu candidato:", lista_equipos)
             if st.button("Guardar Campeón"):
-                supabase.table('champion_predictions').upsert({"email": user_email, "prediction": nuevo_campeon}).execute()
-                st.toast("Campeón guardado", icon="✅")
-                st.rerun()
+                st.session_state.confirm_champion = nuevo_campeon
+
+            if 'confirm_champion' in st.session_state:
+                st.warning(f"⚠️ ¿Estás seguro de elegir a **{st.session_state.confirm_champion}**? Una vez que cierre el Partido 4, no podrás cambiar tu decisión.")
+                c1, c2 = st.columns(2)
+                if c1.button("✅ Aceptar y Guardar"):
+                    supabase.table('champion_predictions').upsert({"email": user_email, "prediction": st.session_state.confirm_champion}).execute()
+                    del st.session_state.confirm_champion
+                    st.success("¡Campeón guardado correctamente!")
+                    st.rerun()
+                if c2.button("❌ Cancelar"):
+                    del st.session_state.confirm_champion
+                    st.rerun()
 
     # --- PESTAÑA 3: RANKING ---
     with app_tabs[2]:
         st.header("📊 Tabla de Posiciones")
         if st.button("🔄 Actualizar Ranking", type="primary"):
-            # Obtener todos los usuarios registrados como base
             usuarios_data = supabase.table('users').select('email', 'username').execute().data
             
             if not usuarios_data:
                 st.info("Aún no hay usuarios registrados.")
             else:
                 usuarios = pd.DataFrame(usuarios_data)
-                usuarios['Total'] = 0  # Todos empiezan con 0 puntos
+                usuarios['Total'] = 0 
                 
-                # Cargar predicciones y resultados
                 preds_data = supabase.table('predictions').select('*').execute().data
                 res_data = supabase.table('results').select('*').execute().data
                 
-                # Calcular puntos por partidos si hay resultados
                 if preds_data and res_data:
                     df_p = pd.DataFrame(preds_data)
                     df_r = pd.DataFrame(res_data)
-                    df_r = df_r.dropna(subset=['real_result']) # Solo tomar partidos ya jugados
+                    df_r = df_r.dropna(subset=['real_result']) 
                     
                     if not df_r.empty:
                         cruce = pd.merge(df_p, df_r[['match_id', 'real_result']], on='match_id', how='inner')
                         cruce['puntos'] = cruce.apply(lambda x: 2 if x['prediction'] == x['real_result'] else 0, axis=1)
                         pts_partidos = cruce.groupby('email')['puntos'].sum().reset_index()
                         
-                        # Sumar puntos al total de los usuarios
                         usuarios = pd.merge(usuarios, pts_partidos, on='email', how='left').fillna(0)
                         usuarios['Total'] += usuarios['puntos']
                         usuarios = usuarios.drop(columns=['puntos'])
 
-                # Calcular puntos por campeón si ya terminó el torneo
                 if campeon_real:
                     camps_data = supabase.table('champion_predictions').select('*').execute().data
                     if camps_data:
                         df_c = pd.DataFrame(camps_data)
                         df_c['pts_camp'] = df_c['prediction'].apply(lambda x: 15 if x == campeon_real else 0)
                         
-                        # Sumar puntos al total de los usuarios
                         usuarios = pd.merge(usuarios, df_c[['email', 'pts_camp']], on='email', how='left').fillna(0)
                         usuarios['Total'] += usuarios['pts_camp']
                         usuarios = usuarios.drop(columns=['pts_camp'])
 
-                # Formatear la tabla final para mostrar solo Nombre y Total
                 ranking_final = usuarios[['username', 'Total']].sort_values(by='Total', ascending=False).reset_index(drop=True)
                 ranking_final['Total'] = ranking_final['Total'].astype(int)
-                ranking_final.index += 1 # Que la lista empiece en el número 1
+                
+                def add_medals(row):
+                    if row.name == 0: return f"🥇 {row['username']}"
+                    elif row.name == 1: return f"🥈 {row['username']}"
+                    elif row.name == 2: return f"🥉 {row['username']}"
+                    else: return row['username']
+                
+                if not ranking_final.empty:
+                    ranking_final['username'] = ranking_final.apply(add_medals, axis=1)
+                    ranking_final.index += 1
                 
                 st.dataframe(ranking_final, use_container_width=True)
-                
-            st.divider()
-            st.subheader("👥 Usuarios Registrados (Admin View)")
-            if st.button("Ver lista de correos"):
-                try:
-                    df_usuarios = pd.DataFrame(usuarios_data)
-                    st.table(df_usuarios)
-                except Exception as e:
-                    st.error(f"Error al obtener la lista: {e}")
 
-    # --- PESTAÑA 4: ADMIN (LLENADO INTELIGENTE DE LLAVES) ---
+    # --- PESTAÑA 4: ADMIN ---
     if es_admin:
         with app_tabs[3]:
             st.error("🚨 PANEL DE ADMINISTRADOR 🚨")
@@ -349,68 +362,34 @@ else:
             default_a = next(m['default_a'] for m in matches if m['id'] == m_id_admin)
             default_b = next(m['default_b'] for m in matches if m['id'] == m_id_admin)
 
-            # --- LÓGICA DE FILTRADO DE EQUIPOS SEGÚN LA FASE ---
             if m_id_admin <= 72:
                 cand_a, cand_b = [default_a], [default_b]
-            
-            elif 73 <= m_id_admin <= 88: # Dieciseisavos: Equipos exactos de sus grupos
-                g_a, g_b = llaves_32[m_id_admin]
-                cand_a = grupos_equipos[g_a] + ["Por definir", "Otro"]
-                cand_b = grupos_equipos[g_b] + ["Por definir", "Otro"]
-            
-            elif 89 <= m_id_admin <= 96: # Octavos: Ganadores de 16vos
-                p_a = 73 + (m_id_admin - 89) * 2
-                p_b = p_a + 1
-                win_a = oficiales.get(p_a, {}).get('real_result')
-                win_b = oficiales.get(p_b, {}).get('real_result')
-                cand_a = [win_a] if win_a and win_a not in ["Pendiente", "Empate"] else [f"Ganador M{p_a}"] + lista_equipos
-                cand_b = [win_b] if win_b and win_b not in ["Pendiente", "Empate"] else [f"Ganador M{p_b}"] + lista_equipos
-            
-            elif 97 <= m_id_admin <= 100: # Cuartos: Ganadores de Octavos
-                p_a = 89 + (m_id_admin - 97) * 2
-                p_b = p_a + 1
-                win_a = oficiales.get(p_a, {}).get('real_result')
-                win_b = oficiales.get(p_b, {}).get('real_result')
-                cand_a = [win_a] if win_a and win_a not in ["Pendiente", "Empate"] else [f"Ganador M{p_a}"] + lista_equipos
-                cand_b = [win_b] if win_b and win_b not in ["Pendiente", "Empate"] else [f"Ganador M{p_b}"] + lista_equipos
-            
-            elif m_id_admin == 101: # Semifinal 1
-                win_a = oficiales.get(97, {}).get('real_result')
-                win_b = oficiales.get(98, {}).get('real_result')
-                cand_a = [win_a] if win_a and win_a not in ["Pendiente", "Empate"] else ["Ganador M97"] + lista_equipos
-                cand_b = [win_b] if win_b and win_b not in ["Pendiente", "Empate"] else ["Ganador M98"] + lista_equipos
-            
-            elif m_id_admin == 102: # Semifinal 2
-                win_a = oficiales.get(99, {}).get('real_result')
-                win_b = oficiales.get(100, {}).get('real_result')
-                cand_a = [win_a] if win_a and win_a not in ["Pendiente", "Empate"] else ["Ganador M99"] + lista_equipos
-                cand_b = [win_b] if win_b and win_b not in ["Pendiente", "Empate"] else ["Ganador M100"] + lista_equipos
-            
-            elif m_id_admin == 103: # Tercer Lugar (Losers)
-                cand_a = ["Perdedor M101"] + lista_equipos
-                cand_b = ["Perdedor M102"] + lista_equipos
-            
-            elif m_id_admin == 104: # Final
-                win_a = oficiales.get(101, {}).get('real_result')
-                win_b = oficiales.get(102, {}).get('real_result')
-                cand_a = [win_a] if win_a and win_a not in ["Pendiente", "Empate"] else ["Ganador M101"] + lista_equipos
-                cand_b = [win_b] if win_b and win_b not in ["Pendiente", "Empate"] else ["Ganador M102"] + lista_equipos
+            else:
+                cand_a = [default_a] + lista_equipos if default_a not in lista_equipos else lista_equipos
+                cand_b = [default_b] + lista_equipos if default_b not in lista_equipos else lista_equipos
 
-            # Validar que el valor guardado exista en la lista para evitar errores visuales
-            current_a = oficiales.get(m_id_admin, {}).get('equipo_a') or cand_a[0]
-            current_b = oficiales.get(m_id_admin, {}).get('equipo_b') or cand_b[0]
+            info_guardada = oficiales.get(m_id_admin, {})
+            current_a = info_guardada.get('equipo_a') or cand_a[0]
+            current_b = info_guardada.get('equipo_b') or cand_b[0]
+            val_marc_a = info_guardada.get('marcador_a', 0)
+            val_marc_b = info_guardada.get('marcador_b', 0)
+            res_guardado = info_guardada.get('real_result', "Pendiente")
+
             if current_a not in cand_a: cand_a = [current_a] + cand_a
             if current_b not in cand_b: cand_b = [current_b] + cand_b
 
             col1, col2 = st.columns(2)
             with col1:
-                eq_a_admin = st.selectbox("Equipo A", options=cand_a, index=cand_a.index(current_a))
-                marc_a = st.number_input("Goles Equipo A", min_value=0, step=1, value=oficiales.get(m_id_admin, {}).get('marcador_a', 0))
+                eq_a_admin = st.selectbox("Equipo A", options=cand_a, index=cand_a.index(current_a), key=f"sel_a_{m_id_admin}")
+                marc_a = st.number_input("Goles Equipo A", min_value=0, step=1, value=val_marc_a, key=f"marc_a_{m_id_admin}")
             with col2:
-                eq_b_admin = st.selectbox("Equipo B", options=cand_b, index=cand_b.index(current_b))
-                marc_b = st.number_input("Goles Equipo B", min_value=0, step=1, value=oficiales.get(m_id_admin, {}).get('marcador_b', 0))
+                eq_b_admin = st.selectbox("Equipo B", options=cand_b, index=cand_b.index(current_b), key=f"sel_b_{m_id_admin}")
+                marc_b = st.number_input("Goles Equipo B", min_value=0, step=1, value=val_marc_b, key=f"marc_b_{m_id_admin}")
             
-            resultado_admin = st.selectbox("¿Quién ganó la apuesta? (Para repartir puntos)", ["Pendiente", eq_a_admin, "Empate", eq_b_admin])
+            res_opciones = ["Pendiente", eq_a_admin, "Empate", eq_b_admin]
+            if res_guardado not in res_opciones: res_guardado = "Pendiente"
+            
+            resultado_admin = st.selectbox("¿Quién ganó la apuesta?", res_opciones, index=res_opciones.index(res_guardado), key=f"res_{m_id_admin}")
             
             if st.button("Guardar Partido"):
                 data = {
@@ -420,6 +399,7 @@ else:
                 }
                 supabase.table('results').upsert(data).execute()
                 st.success("Partido actualizado.")
+                st.rerun()
             
             st.divider()
             st.subheader("2. Finalizar Torneo (Otorgar 15 pts)")
@@ -428,3 +408,4 @@ else:
                 val = None if camp_oficial == "Ninguno (Torneo Activo)" else camp_oficial
                 supabase.table('tournament_settings').upsert({"id": 1, "actual_champion": val}).execute()
                 st.success("Configuración de campeón guardada.")
+                st.rerun()
