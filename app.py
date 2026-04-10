@@ -262,7 +262,7 @@ else:
         oficiales = {}
         campeon_real = None
 
-    es_admin = user_email == "admin@tuquiniela.com" # <--- RECUERDA PONER AQUÍ TU CORREO DE ADMIN
+    es_admin = user_email == "adam666.die@gmail.com" # <--- RECUERDA PONER AQUÍ TU CORREO DE ADMIN
     tabs = ["📝 Pronósticos", "👑 Campeón (15 pts)", "📊 Ranking"]
     if es_admin:
         tabs.append("⚙️ Panel Admin")
