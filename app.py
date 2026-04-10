@@ -4,7 +4,7 @@ from supabase import create_client, Client
 import pytz
 from datetime import datetime
 
-st.set_page_config(page_title="Quiniela Mundial 2026 Los ArciEnegas", page_icon="🏆", layout="wide")
+st.set_page_config(page_title="Quiniela Mundial 2026", page_icon="🏆", layout="wide")
 
 # --- CONEXIÓN A SUPABASE ---
 @st.cache_resource
@@ -32,11 +32,24 @@ grupos_equipos = {
     "L": [f"{flag_ing} Inglaterra", "🇭🇷 Croacia", "🇬🇭 Ghana", "🇵🇦 Panamá"]
 }
 
-llaves_32 = {
-    73: ("A", "B"), 74: ("C", "D"), 75: ("E", "F"), 76: ("G", "H"),
-    77: ("I", "J"), 78: ("K", "L"), 79: ("A", "C"), 80: ("B", "D"),
-    81: ("E", "G"), 82: ("F", "H"), 83: ("I", "K"), 84: ("J", "L"),
-    85: ("A", "E"), 86: ("B", "F"), 87: ("C", "G"), 88: ("D", "H")
+# Llaves oficiales de la FIFA para Dieciseisavos (M73 a M88)
+llaves_32_oficial = {
+    73: "2A vs 2B",
+    74: "1E vs 3A/B/C/D/F",
+    75: "1I vs 3C/D/F/G/H",
+    76: "2G vs 2H",
+    77: "1C vs 3A/B/F/G/H",
+    78: "2I vs 2L",
+    79: "1A vs 3C/E/F/H/I",
+    80: "1L vs 3E/H/I/J/K",
+    81: "1D vs 3B/E/G/I/J",
+    82: "2D vs 2E",
+    83: "1K vs 3D/E/I/J/L",
+    84: "1J vs 2H",
+    85: "1B vs 3E/G/H/I/K",
+    86: "1F vs 2C",
+    87: "1G vs 3A/B/D/E/F",
+    88: "1H vs 2J"
 }
 
 lista_equipos = [equipo for grupo in grupos_equipos.values() for equipo in grupo] + ["Por definir", "Otro"]
@@ -60,8 +73,8 @@ matches = [
     {"id": 14, "fase": "Grupo G", "default_a": grupos_equipos["G"][0], "default_b": grupos_equipos["G"][1], "fecha_base": "2026-06-15 13:00:00"},
     {"id": 15, "fase": "Grupo H", "default_a": grupos_equipos["H"][3], "default_b": grupos_equipos["H"][1], "fecha_base": "2026-06-15 16:00:00"},
     {"id": 16, "fase": "Grupo G", "default_a": grupos_equipos["G"][2], "default_b": grupos_equipos["G"][3], "fecha_base": "2026-06-15 19:00:00"},
-    {"id": 17, "fase": "Grupo I", "default_a": grupos_equipos["I"][0], "default_b": grupos_equipos["I"][2], "fecha_base": "2026-06-16 13:00:00"},
-    {"id": 18, "fase": "Grupo I", "default_a": grupos_equipos["I"][3], "default_b": grupos_equipos["I"][1], "fecha_base": "2026-06-16 16:00:00"},
+    {"id": 17, "fase": "Grupo I", "default_a": grupos_equipos["I"][0], "default_b": grupos_equipos["I"][1], "fecha_base": "2026-06-16 13:00:00"},
+    {"id": 18, "fase": "Grupo I", "default_a": grupos_equipos["I"][2], "default_b": grupos_equipos["I"][3], "fecha_base": "2026-06-16 16:00:00"},
     {"id": 19, "fase": "Grupo J", "default_a": grupos_equipos["J"][0], "default_b": grupos_equipos["J"][2], "fecha_base": "2026-06-16 19:00:00"},
     {"id": 20, "fase": "Grupo J", "default_a": grupos_equipos["J"][1], "default_b": grupos_equipos["J"][3], "fecha_base": "2026-06-16 22:00:00"},
     {"id": 21, "fase": "Grupo K", "default_a": grupos_equipos["K"][0], "default_b": grupos_equipos["K"][3], "fecha_base": "2026-06-17 11:00:00"},
@@ -109,11 +122,14 @@ matches = [
     {"id": 59, "fase": "Grupo F", "default_a": grupos_equipos["F"][0], "default_b": grupos_equipos["F"][3], "fecha_base": "2026-06-26 17:00:00"},
     {"id": 60, "fase": "Grupo F", "default_a": grupos_equipos["F"][1], "default_b": grupos_equipos["F"][2], "fecha_base": "2026-06-26 17:00:00"},
     {"id": 61, "fase": "Grupo G", "default_a": grupos_equipos["G"][0], "default_b": grupos_equipos["G"][3], "fecha_base": "2026-06-27 13:00:00"},
-    {"id": 62, "fase": "Grupo G", "default_a": grupos_equipos["G"][1], "default_b": grupos_equipos["G"][2], "fecha_base": "2026-06-27 13:00:00"},
+    
+    # Partido M62 Específico: Senegal vs Irak
+    {"id": 62, "fase": "Grupo I", "default_a": grupos_equipos["I"][1], "default_b": grupos_equipos["I"][3], "fecha_base": "2026-06-27 13:00:00"},
+    
     {"id": 63, "fase": "Grupo H", "default_a": grupos_equipos["H"][0], "default_b": grupos_equipos["H"][1], "fecha_base": "2026-06-27 17:00:00"},
     {"id": 64, "fase": "Grupo H", "default_a": grupos_equipos["H"][2], "default_b": grupos_equipos["H"][3], "fecha_base": "2026-06-27 17:00:00"},
-    {"id": 65, "fase": "Grupo I", "default_a": grupos_equipos["I"][0], "default_b": grupos_equipos["I"][1], "fecha_base": "2026-06-28 13:00:00"},
-    {"id": 66, "fase": "Grupo I", "default_a": grupos_equipos["I"][2], "default_b": grupos_equipos["I"][3], "fecha_base": "2026-06-28 13:00:00"},
+    {"id": 65, "fase": "Grupo I", "default_a": grupos_equipos["I"][0], "default_b": grupos_equipos["I"][2], "fecha_base": "2026-06-28 13:00:00"},
+    {"id": 66, "fase": "Grupo G", "default_a": grupos_equipos["G"][1], "default_b": grupos_equipos["G"][2], "fecha_base": "2026-06-28 13:00:00"},
     {"id": 67, "fase": "Grupo J", "default_a": grupos_equipos["J"][0], "default_b": grupos_equipos["J"][3], "fecha_base": "2026-06-28 17:00:00"},
     {"id": 68, "fase": "Grupo J", "default_a": grupos_equipos["J"][2], "default_b": grupos_equipos["J"][1], "fecha_base": "2026-06-28 17:00:00"},
     {"id": 69, "fase": "Grupo K", "default_a": grupos_equipos["K"][0], "default_b": grupos_equipos["K"][1], "fecha_base": "2026-06-29 13:00:00"},
@@ -122,12 +138,13 @@ matches = [
     {"id": 72, "fase": "Grupo L", "default_a": grupos_equipos["L"][1], "default_b": grupos_equipos["L"][2], "fecha_base": "2026-06-29 17:00:00"}
 ]
 
-# --- FASE ELIMINATORIA ---
+# --- FASE ELIMINATORIA (Con Llaves Oficiales FIFA) ---
 fechas_16vos = ["2026-06-28", "2026-06-29", "2026-06-30", "2026-07-01", "2026-07-02", "2026-07-03"]
 for i in range(73, 89):
+    cruce_oficial = llaves_32_oficial[i].split(" vs ")
     matches.append({
         "id": i, "fase": "Dieciseisavos (32)", 
-        "default_a": "Clasificado", "default_b": "Clasificado", 
+        "default_a": cruce_oficial[0], "default_b": cruce_oficial[1], 
         "fecha_base": f"{fechas_16vos[(i - 73) % 6]} 18:00:00"
     })
 
@@ -165,17 +182,29 @@ if st.session_state.user is None:
     
     with tab_login:
         with st.form("form_login"):
-            email_login = st.text_input("Correo Electrónico")
-            pass_login = st.text_input("Contraseña", type="password")
+            st.text_input("Correo Electrónico", key="login_email_input")
+            st.text_input("Contraseña", type="password", key="login_pass_input")
             submit_btn = st.form_submit_button("Entrar")
             
             if submit_btn:
-                try:
-                    res = supabase.auth.sign_in_with_password({"email": email_login, "password": pass_login})
-                    st.session_state.user = res.user
-                    st.rerun()
-                except:
-                    st.error("Credenciales incorrectas.")
+                email_actual = st.session_state.login_email_input
+                pass_actual = st.session_state.login_pass_input
+                
+                if email_actual and pass_actual:
+                    try:
+                        res = supabase.auth.sign_in_with_password({
+                            "email": email_actual, 
+                            "password": pass_actual
+                        })
+                        st.session_state.user = res.user
+                        st.rerun()
+                    except Exception as e:
+                        if "Invalid login credentials" in str(e):
+                            st.error("Credenciales incorrectas. Revisa tu correo o contraseña.")
+                        else:
+                            st.error(f"Hubo un error de conexión: {e}")
+                else:
+                    st.warning("Por favor, llena ambos campos antes de entrar.")
 
     with tab_registro:
         email_reg = st.text_input("Correo", key="reg_email")
@@ -261,7 +290,7 @@ else:
     with app_tabs[1]:
         st.header("👑 Predicción del Campeón")
         
-        # Bloqueo después del M4
+        # Bloqueo estricto si el Partido 4 ya fue calificado por el admin
         m4_cerrado = oficiales.get(4, {}).get('real_result') is not None
         
         try:
@@ -285,7 +314,7 @@ else:
                 st.session_state.confirm_champion = nuevo_campeon
 
             if 'confirm_champion' in st.session_state:
-                st.warning(f"⚠️ ¿Estás seguro de elegir a **{st.session_state.confirm_champion}**? Una vez que cierre el Partido 4, no podrás cambiar tu decisión.")
+                st.warning(f"⚠️ ¿Estás seguro de elegir a **{st.session_state.confirm_champion}**? Una vez que se asigne resultado al Partido 4, no podrás cambiar tu decisión.")
                 c1, c2 = st.columns(2)
                 if c1.button("✅ Aceptar y Guardar"):
                     supabase.table('champion_predictions').upsert({"email": user_email, "prediction": st.session_state.confirm_champion}).execute()
@@ -338,6 +367,7 @@ else:
                 ranking_final = usuarios[['username', 'Total']].sort_values(by='Total', ascending=False).reset_index(drop=True)
                 ranking_final['Total'] = ranking_final['Total'].astype(int)
                 
+                # Asignación de Medallas al Top 3
                 def add_medals(row):
                     if row.name == 0: return f"🥇 {row['username']}"
                     elif row.name == 1: return f"🥈 {row['username']}"
@@ -368,9 +398,12 @@ else:
                 cand_a = [default_a] + lista_equipos if default_a not in lista_equipos else lista_equipos
                 cand_b = [default_b] + lista_equipos if default_b not in lista_equipos else lista_equipos
 
+            # Si el partido no tiene datos guardados, info_guardada estará vacía y tomará los defaults (0 y Pendiente)
             info_guardada = oficiales.get(m_id_admin, {})
             current_a = info_guardada.get('equipo_a') or cand_a[0]
             current_b = info_guardada.get('equipo_b') or cand_b[0]
+            
+            # Aquí garantizamos el "Reset visual" al cambiar de partido
             val_marc_a = info_guardada.get('marcador_a', 0)
             val_marc_b = info_guardada.get('marcador_b', 0)
             res_guardado = info_guardada.get('real_result', "Pendiente")
@@ -380,6 +413,7 @@ else:
 
             col1, col2 = st.columns(2)
             with col1:
+                # El key dinámico fuerza a que el componente se redibuje limpio cada vez que cambias el partido en el selectbox
                 eq_a_admin = st.selectbox("Equipo A", options=cand_a, index=cand_a.index(current_a), key=f"sel_a_{m_id_admin}")
                 marc_a = st.number_input("Goles Equipo A", min_value=0, step=1, value=val_marc_a, key=f"marc_a_{m_id_admin}")
             with col2:
