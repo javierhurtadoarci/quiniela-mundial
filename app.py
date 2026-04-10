@@ -4,7 +4,7 @@ from supabase import create_client, Client
 import pytz
 from datetime import datetime
 
-st.set_page_config(page_title="Quiniela Mundial 2026", page_icon="🏆", layout="wide")
+st.set_page_config(page_title="Quiniela Mundial 2026 Los ArciEnegas", page_icon="🏆", layout="wide")
 
 # --- CONEXIÓN A SUPABASE ---
 @st.cache_resource
@@ -217,7 +217,7 @@ else:
         oficiales = {}
         campeon_real = None
 
-    es_admin = user_email == "admin@tuquiniela.com" # <--- RECUERDA PONER AQUÍ TU CORREO DE ADMIN
+    es_admin = user_email == "adam666.die@gmail.com" # <--- RECUERDA PONER AQUÍ TU CORREO DE ADMIN
     tabs = ["📝 Pronósticos", "👑 Campeón (15 pts)", "📊 Ranking"]
     if es_admin:
         tabs.append("⚙️ Panel Admin")
