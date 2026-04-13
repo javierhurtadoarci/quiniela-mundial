@@ -14,11 +14,8 @@ def init_connection():
 
 supabase: Client = init_connection()
 
-# --- MANEJADOR DE COOKIES (PARA SESIÓN PERSISTENTE) ---
+# --- MANEJADOR DE COOKIES (NATIVO Y SIN CACHÉ PARA EVITAR ERRORES) ---
 cookie_manager = stx.CookieManager(key="cookie_manager")
-
-# ¡AQUÍ ESTÁ LA LÍNEA QUE FALTABA!
-cookie_manager = get_cookie_manager()
 
 # --- CONFIGURACIÓN DE EQUIPOS Y GRUPOS ---
 flag_ing = "\U0001F3F4\U000E0067\U000E0062\U000E0065\U000E006E\U000E0067\U000E007F"
