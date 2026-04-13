@@ -305,17 +305,17 @@ else:
     cdmx_tz = pytz.timezone('America/Mexico_City')
     ahora_cdmx = datetime.now(cdmx_tz)
     hoy_fecha_cdmx = ahora_cdmx.date()
-
-    # --- PESTAÑA 1: PRONÓSTICOS (CON FILTROS Y ESTADÍSTICAS) ---
+        
+    # --- PESTAÑA 1: PRONÓSTICOS (CON FILTRO DESPLEGABLE) ---
     with app_tabs[0]:
         st.header("Tus Pronósticos")
         
-        # 1. Filtro de Fases
+        # 1. El Menú Desplegable (Filtro)
         fase_seleccionada = st.selectbox("📌 Filtrar Partidos por:", 
             ["Jornada 1 (M1 - M24)", "Jornada 2 (M25 - M48)", "Jornada 3 (M49 - M72)", 
              "Dieciseisavos (M73 - M88)", "Octavos (M89 - M96)", "Cuartos (M97 - M100)", "Semifinales y Final (M101 - M104)"])
         
-        # Determinar el rango a mostrar
+        # 2. Filtrar los partidos según lo que elegiste en el menú
         matches_filtrados = []
         if "Jornada 1" in fase_seleccionada: matches_filtrados = [m for m in matches if m['id'] <= 24]
         elif "Jornada 2" in fase_seleccionada: matches_filtrados = [m for m in matches if 25 <= m['id'] <= 48]
@@ -325,23 +325,24 @@ else:
         elif "Cuartos" in fase_seleccionada: matches_filtrados = [m for m in matches if 97 <= m['id'] <= 100]
         elif "Semifinales" in fase_seleccionada: matches_filtrados = [m for m in matches if m['id'] >= 101]
 
-        mis_preds = {p['match_id']: p['prediction'] for p in preds_comunidad.get(list(preds_comunidad.keys())[0], []) if p['email'] == user_email} if preds_comunidad else {}
-        # Refresh mis_preds exact
-        mis_preds = {p['match_id']: p['prediction'] for id, lst in preds_comunidad.items() for p in lst if p['email'] == user_email}
+        # Recuperamos tus pronósticos guardados
+        mis_preds_exactas = {p['match_id']: p['prediction'] for lst in preds_comunidad.values() for p in lst if p['email'] == user_email} if preds_comunidad else {}
 
+        # 3. Dibujamos solo los partidos de esa fase
         for match in matches_filtrados:
             m_id = match['id']
             eq_a = oficiales.get(m_id, {}).get('equipo_a') or resolver_llave(match['default_a'], tablas_posiciones, oficiales)
             eq_b = oficiales.get(m_id, {}).get('equipo_b') or resolver_llave(match['default_b'], tablas_posiciones, oficiales)
             resultado_oficial = oficiales.get(m_id, {}).get('real_result')
             
+            # Verificación de fecha para bloquear el partido
             match_dt = cdmx_tz.localize(datetime.strptime(match['fecha_base'], '%Y-%m-%d %H:%M:%S'))
             partido_bloqueado = hoy_fecha_cdmx >= match_dt.date()
             
             with st.container():
                 st.markdown(f"**M{m_id} | {match['fase']} | 🕒 {convertir_hora(match['fecha_base'], user_tz)}**")
                 opciones = [eq_a, "Empate", eq_b]
-                voto_crudo = mis_preds.get(m_id)
+                voto_crudo = mis_preds_exactas.get(m_id)
                 idx = opciones.index(voto_crudo) if voto_crudo in opciones else None
 
                 if resultado_oficial:
@@ -360,6 +361,25 @@ else:
                         st.toast(f"M{m_id} Guardado", icon="✅")
                         st.rerun()
                 
+                # --- Estadísticas Globales ---
+                if partido_bloqueado or resultado_oficial:
+                    apuestas_partido = preds_comunidad.get(m_id, [])
+                    total_apuestas = len(apuestas_partido)
+                    if total_apuestas > 0:
+                        votos_a = sum(1 for p in apuestas_partido if p['prediction'] == eq_a)
+                        votos_e = sum(1 for p in apuestas_partido if p['prediction'] == "Empate")
+                        votos_b = sum(1 for p in apuestas_partido if p['prediction'] == eq_b)
+                        
+                        st.caption(f"📊 **Estadísticas de la Comunidad:** ({total_apuestas} votos)")
+                        st.progress(votos_a / total_apuestas if total_apuestas else 0, text=f"{eq_a} ({int(votos_a/total_apuestas*100)}%)")
+                        st.progress(votos_e / total_apuestas if total_apuestas else 0, text=f"Empate ({int(votos_e/total_apuestas*100)}%)")
+                        st.progress(votos_b / total_apuestas if total_apuestas else 0, text=f"{eq_b} ({int(votos_b/total_apuestas*100)}%)")
+                        
+                        if resultado_oficial and resultado_oficial != "Pendiente":
+                            ganadores = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == resultado_oficial]
+                            if ganadores: st.success(f"🎯 Acertaron: {', '.join(ganadores)}")
+                            else: st.error("Nadie acertó a este partido.")
+                st.divider()        
                 # --- 3. Sabiduría de las Masas ---
                 if partido_bloqueado or resultado_oficial:
                     apuestas_partido = preds_comunidad.get(m_id, [])
