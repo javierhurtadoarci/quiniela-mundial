@@ -15,9 +15,7 @@ def init_connection():
 supabase: Client = init_connection()
 
 # --- MANEJADOR DE COOKIES (PARA SESIÓN PERSISTENTE) ---
-@st.cache_resource
-def get_cookie_manager():
-    return stx.CookieManager(key="cookie_manager")
+cookie_manager = stx.CookieManager(key="cookie_manager")
 
 # ¡AQUÍ ESTÁ LA LÍNEA QUE FALTABA!
 cookie_manager = get_cookie_manager()
