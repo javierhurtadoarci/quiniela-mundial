@@ -32,7 +32,6 @@ grupos_equipos = {
     "L": [f"{flag_ing} Inglaterra", "🇭🇷 Croacia", "🇬🇭 Ghana", "🇵🇦 Panamá"]
 }
 
-# Llaves oficiales M73 - M88
 llaves_32_oficial = {
     73: "2A vs 2B", 74: "1E vs Mejor 3° (A/B/C/D/F)", 75: "1I vs Mejor 3° (C/D/F/G/H)", 76: "2G vs 2H",
     77: "1C vs Mejor 3° (A/B/F/G/H)", 78: "2I vs 2L", 79: "1A vs Mejor 3° (C/E/F/H/I)", 80: "1L vs Mejor 3° (E/H/I/J/K)",
@@ -174,27 +173,23 @@ def calcular_posiciones_grupos(resultados_oficiales):
 
                     if eq_a in tablas[g]:
                         tablas[g][eq_a]['PJ'] += 1
-                        tablas[g][eq_a]['GF'] += marc_a
-                        tablas[g][eq_a]['GC'] += marc_b
+                        tablas[g][eq_a]['GF'] += marc_a; tablas[g][eq_a]['GC'] += marc_b
                         tablas[g][eq_a]['DIF'] += (marc_a - marc_b)
                         if ganador == eq_a:
                             tablas[g][eq_a]['G'] += 1; tablas[g][eq_a]['PTS'] += 3
                         elif ganador == "Empate":
                             tablas[g][eq_a]['E'] += 1; tablas[g][eq_a]['PTS'] += 1
-                        else:
-                            tablas[g][eq_a]['P'] += 1
+                        else: tablas[g][eq_a]['P'] += 1
 
                     if eq_b in tablas[g]:
                         tablas[g][eq_b]['PJ'] += 1
-                        tablas[g][eq_b]['GF'] += marc_b
-                        tablas[g][eq_b]['GC'] += marc_a
+                        tablas[g][eq_b]['GF'] += marc_b; tablas[g][eq_b]['GC'] += marc_a
                         tablas[g][eq_b]['DIF'] += (marc_b - marc_a)
                         if ganador == eq_b:
                             tablas[g][eq_b]['G'] += 1; tablas[g][eq_b]['PTS'] += 3
                         elif ganador == "Empate":
                             tablas[g][eq_b]['E'] += 1; tablas[g][eq_b]['PTS'] += 1
-                        else:
-                            tablas[g][eq_b]['P'] += 1
+                        else: tablas[g][eq_b]['P'] += 1
 
     for g in tablas:
         tablas[g] = dict(sorted(tablas[g].items(), key=lambda item: (item[1]['PTS'], item[1]['DIF'], item[1]['GF']), reverse=True))
@@ -203,20 +198,16 @@ def calcular_posiciones_grupos(resultados_oficiales):
 # --- TRADUCTOR DE LLAVES ---
 def resolver_llave(etiqueta, tablas_posiciones, oficiales):
     etiqueta = str(etiqueta).strip()
-    
     if len(etiqueta) == 2 and etiqueta[0] in ["1", "2"] and etiqueta[1] in grupos_equipos.keys():
         pos = int(etiqueta[0]) - 1
         grupo = etiqueta[1]
         equipos_ordenados = list(tablas_posiciones[grupo].keys())
         partidos_jugados = sum(tablas_posiciones[grupo][eq]['PJ'] for eq in equipos_ordenados)
-        if partidos_jugados == 12: 
-            return equipos_ordenados[pos]
-    
+        if partidos_jugados == 12: return equipos_ordenados[pos]
     if etiqueta.startswith("Ganador M"):
         m_id = int(etiqueta.replace("Ganador M", ""))
         res = oficiales.get(m_id, {}).get("real_result")
         if res and res not in ["Pendiente", "Empate"]: return res
-            
     if etiqueta.startswith("Perdedor M"):
         m_id = int(etiqueta.replace("Perdedor M", ""))
         res = oficiales.get(m_id, {}).get("real_result")
@@ -224,44 +215,14 @@ def resolver_llave(etiqueta, tablas_posiciones, oficiales):
         eq_b = oficiales.get(m_id, {}).get("equipo_b")
         if res and res not in ["Pendiente", "Empate"] and eq_a and eq_b:
             return eq_b if res == eq_a else eq_a
-
     return etiqueta
 
-def get_candidates(label):
-    label_clean = label.strip()
-    if label_clean.startswith("1") or label_clean.startswith("2"):
-        grupo = label_clean[1]
-        return grupos_equipos.get(grupo, []) + ["Por definir", "Otro"]
-    elif "Mejor 3°" in label_clean:
-        grupos_str = label_clean.split("(")[1].split(")")[0]
-        cands = []
-        for g in grupos_str.split("/"): cands.extend(grupos_equipos.get(g, []))
-        return cands + ["Por definir", "Otro"]
-    return [label_clean] + lista_equipos
-
-def get_winner_loser_candidates(label, oficiales):
-    if label.startswith("Ganador M"):
-        m_id = int(label.replace("Ganador M", ""))
-        res = oficiales.get(m_id, {}).get("real_result")
-        if res and res not in ["Pendiente", "Empate"]: return [res] + lista_equipos
-    elif label.startswith("Perdedor M"):
-        m_id = int(label.replace("Perdedor M", ""))
-        res = oficiales.get(m_id, {}).get("real_result")
-        eq_a = oficiales.get(m_id, {}).get("equipo_a")
-        eq_b = oficiales.get(m_id, {}).get("equipo_b")
-        if res and res not in ["Pendiente", "Empate"] and eq_a and eq_b:
-            loser = eq_b if res == eq_a else eq_a
-            return [loser] + lista_equipos
-    return [label] + lista_equipos
-
-# --- FUNCIONES AUXILIARES ---
 def convertir_hora(fecha_base_str, timezone_destino):
     dt_base = pytz.timezone('America/Mexico_City').localize(datetime.strptime(fecha_base_str, '%Y-%m-%d %H:%M:%S'))
     return dt_base.astimezone(pytz.timezone(timezone_destino)).strftime('%d %b %Y - %H:%M')
 
 # --- SISTEMA DE AUTENTICACIÓN ---
-if 'user' not in st.session_state:
-    st.session_state.user = None
+if 'user' not in st.session_state: st.session_state.user = None
 
 if st.session_state.user is None:
     st.title("⚽ Quiniela Mundial 2026")
@@ -271,8 +232,7 @@ if st.session_state.user is None:
         with st.form("form_login"):
             st.text_input("Correo Electrónico", key="login_email_input")
             st.text_input("Contraseña", type="password", key="login_pass_input")
-            submit_btn = st.form_submit_button("Entrar")
-            if submit_btn:
+            if st.form_submit_button("Entrar"):
                 email_actual = st.session_state.login_email_input
                 pass_actual = st.session_state.login_pass_input
                 if email_actual and pass_actual:
@@ -300,9 +260,12 @@ if st.session_state.user is None:
 else:
     user_email = st.session_state.user.email
     try:
-        user_record = supabase.table('users').select('username').eq('email', user_email).execute().data
-        display_name = user_record[0]['username'] if user_record else user_email
-    except: display_name = user_email
+        usuarios_db = supabase.table('users').select('email', 'username').execute().data
+        email_to_user = {u['email']: u['username'] for u in usuarios_db} if usuarios_db else {}
+        display_name = email_to_user.get(user_email, user_email)
+    except:
+        display_name = user_email
+        email_to_user = {}
         
     st.sidebar.success(f"👤 Hola, {display_name}")
     if st.sidebar.button("Cerrar Sesión"):
@@ -320,67 +283,101 @@ else:
         campeon_real = torneo_db[0].get('actual_champion') if torneo_db else None
         subcampeon_real = torneo_db[0].get('actual_subcampeon') if torneo_db else None
         tercero_real = torneo_db[0].get('actual_tercero') if torneo_db else None
+        
+        # Precargar TODAS las predicciones comunitarias para estadísticas
+        todas_preds_db = supabase.table('predictions').select('*').execute().data
+        preds_comunidad = {}
+        for p in todas_preds_db:
+            preds_comunidad.setdefault(p['match_id'], []).append(p)
     except:
         oficiales = {}
-        campeon_real, subcampeon_real, tercero_real = None, None, None
+        preds_comunidad = {}
+        campeon_real = subcampeon_real = tercero_real = None
 
     tablas_posiciones = calcular_posiciones_grupos(oficiales)
     
-    # --- CORREO DEL ADMINISTRADOR ---
     es_admin = user_email == "adam666.die@gmail.com"
     tabs = ["📝 Pronósticos", "🏆 Grupos", "👑 Podio Final", "📊 Ranking"]
     if es_admin: tabs.append("⚙️ Panel Admin")
 
     app_tabs = st.tabs(tabs)
 
-    # --- Obtenemos la fecha actual en CDMX para el bloqueo de partidos ---
     cdmx_tz = pytz.timezone('America/Mexico_City')
     ahora_cdmx = datetime.now(cdmx_tz)
     hoy_fecha_cdmx = ahora_cdmx.date()
 
-    # --- PESTAÑA 1: PRONÓSTICOS ---
+    # --- PESTAÑA 1: PRONÓSTICOS (CON FILTROS Y ESTADÍSTICAS) ---
     with app_tabs[0]:
         st.header("Tus Pronósticos")
-        try:
-            mis_preds = {row['match_id']: row['prediction'] for row in supabase.table('predictions').select('*').eq('email', user_email).execute().data}
-        except: mis_preds = {}
+        
+        # 1. Filtro de Fases
+        fase_seleccionada = st.selectbox("📌 Filtrar Partidos por:", 
+            ["Jornada 1 (M1 - M24)", "Jornada 2 (M25 - M48)", "Jornada 3 (M49 - M72)", 
+             "Dieciseisavos (M73 - M88)", "Octavos (M89 - M96)", "Cuartos (M97 - M100)", "Semifinales y Final (M101 - M104)"])
+        
+        # Determinar el rango a mostrar
+        matches_filtrados = []
+        if "Jornada 1" in fase_seleccionada: matches_filtrados = [m for m in matches if m['id'] <= 24]
+        elif "Jornada 2" in fase_seleccionada: matches_filtrados = [m for m in matches if 25 <= m['id'] <= 48]
+        elif "Jornada 3" in fase_seleccionada: matches_filtrados = [m for m in matches if 49 <= m['id'] <= 72]
+        elif "Dieciseisavos" in fase_seleccionada: matches_filtrados = [m for m in matches if 73 <= m['id'] <= 88]
+        elif "Octavos" in fase_seleccionada: matches_filtrados = [m for m in matches if 89 <= m['id'] <= 96]
+        elif "Cuartos" in fase_seleccionada: matches_filtrados = [m for m in matches if 97 <= m['id'] <= 100]
+        elif "Semifinales" in fase_seleccionada: matches_filtrados = [m for m in matches if m['id'] >= 101]
 
-        for match in matches:
+        mis_preds = {p['match_id']: p['prediction'] for p in preds_comunidad.get(list(preds_comunidad.keys())[0], []) if p['email'] == user_email} if preds_comunidad else {}
+        # Refresh mis_preds exact
+        mis_preds = {p['match_id']: p['prediction'] for id, lst in preds_comunidad.items() for p in lst if p['email'] == user_email}
+
+        for match in matches_filtrados:
             m_id = match['id']
             eq_a = oficiales.get(m_id, {}).get('equipo_a') or resolver_llave(match['default_a'], tablas_posiciones, oficiales)
             eq_b = oficiales.get(m_id, {}).get('equipo_b') or resolver_llave(match['default_b'], tablas_posiciones, oficiales)
             resultado_oficial = oficiales.get(m_id, {}).get('real_result')
             
-            # Cálculo para determinar si el partido debe bloquearse (Día del evento en CDMX)
             match_dt = cdmx_tz.localize(datetime.strptime(match['fecha_base'], '%Y-%m-%d %H:%M:%S'))
-            match_fecha = match_dt.date()
-            partido_bloqueado = hoy_fecha_cdmx >= match_fecha
+            partido_bloqueado = hoy_fecha_cdmx >= match_dt.date()
             
             with st.container():
                 st.markdown(f"**M{m_id} | {match['fase']} | 🕒 {convertir_hora(match['fecha_base'], user_tz)}**")
+                opciones = [eq_a, "Empate", eq_b]
+                voto_crudo = mis_preds.get(m_id)
+                idx = opciones.index(voto_crudo) if voto_crudo in opciones else None
+
                 if resultado_oficial:
                     st.info(f"🔒 FINALIZADO: {eq_a} [{oficiales[m_id]['marcador_a']}] vs [{oficiales[m_id]['marcador_b']}] {eq_b} | Res: **{resultado_oficial}**")
-                    st.write(f"Tu pronóstico: {mis_preds.get(m_id, 'Ninguno')}")
+                    st.write(f"Tu pronóstico: {voto_crudo if voto_crudo else 'Ninguno'}")
+                elif partido_bloqueado:
+                    st.warning("⏳ Partido bloqueado (Día del evento alcanzado).")
+                    st.radio(f"Gana M{m_id}", opciones, index=idx, key=f"p_{m_id}", horizontal=True, disabled=True, label_visibility="collapsed")
+                    st.write(f"Tu pronóstico guardado: **{voto_crudo if voto_crudo else 'Ninguno'}**")
                 else:
                     st.markdown(f"### {eq_a} vs {eq_b}")
-                    opciones = [eq_a, "Empate", eq_b]
-                    
-                    # La nueva regla: Solo marca la casilla si el pronóstico guardado COINCIDE EXACTAMENTE con las opciones actuales.
-                    # Si el usuario apostó "2A", y ahora dice "México", la opción queda en blanco para que tome una nueva decisión.
-                    voto_crudo = mis_preds.get(m_id)
-                    idx = opciones.index(voto_crudo) if voto_crudo in opciones else None
-
-                    if partido_bloqueado:
-                        st.warning("⏳ Partido bloqueado (Día del evento alcanzado).")
-                        st.radio(f"Gana M{m_id}", opciones, index=idx, key=f"p_{m_id}", horizontal=True, label_visibility="collapsed", disabled=True)
-                        st.write(f"Tu pronóstico guardado: **{voto_crudo if voto_crudo else 'Ninguno'}**")
-                    else:
-                        seleccion = st.radio(f"Gana M{m_id}", opciones, index=idx, key=f"p_{m_id}", horizontal=True, label_visibility="collapsed")
-                        if st.button("Guardar Pronóstico", key=f"b_{m_id}"):
-                            data_pronostico = {"email": user_email, "match_id": m_id, "prediction": seleccion}
-                            supabase.table('predictions').upsert(data_pronostico, on_conflict="email,match_id").execute()
-                            st.toast(f"M{m_id} Guardado", icon="✅")
-                            st.rerun()
+                    seleccion = st.radio(f"Gana M{m_id}", opciones, index=idx, key=f"p_{m_id}", horizontal=True, label_visibility="collapsed")
+                    if st.button("Guardar Pronóstico", key=f"b_{m_id}"):
+                        data_pronostico = {"email": user_email, "match_id": m_id, "prediction": seleccion}
+                        supabase.table('predictions').upsert(data_pronostico, on_conflict="email,match_id").execute()
+                        st.toast(f"M{m_id} Guardado", icon="✅")
+                        st.rerun()
+                
+                # --- 3. Sabiduría de las Masas ---
+                if partido_bloqueado or resultado_oficial:
+                    apuestas_partido = preds_comunidad.get(m_id, [])
+                    total_apuestas = len(apuestas_partido)
+                    if total_apuestas > 0:
+                        votos_a = sum(1 for p in apuestas_partido if p['prediction'] == eq_a)
+                        votos_e = sum(1 for p in apuestas_partido if p['prediction'] == "Empate")
+                        votos_b = sum(1 for p in apuestas_partido if p['prediction'] == eq_b)
+                        
+                        st.caption(f"📊 **Estadísticas de la Comunidad:** ({total_apuestas} votos)")
+                        st.progress(votos_a / total_apuestas if total_apuestas else 0, text=f"{eq_a} ({int(votos_a/total_apuestas*100)}%)")
+                        st.progress(votos_e / total_apuestas if total_apuestas else 0, text=f"Empate ({int(votos_e/total_apuestas*100)}%)")
+                        st.progress(votos_b / total_apuestas if total_apuestas else 0, text=f"{eq_b} ({int(votos_b/total_apuestas*100)}%)")
+                        
+                        if resultado_oficial and resultado_oficial != "Pendiente":
+                            ganadores = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == resultado_oficial]
+                            if ganadores: st.success(f"🎯 Acertaron: {', '.join(ganadores)}")
+                            else: st.error("Nadie acertó a este partido.")
                 st.divider()
 
     # --- PESTAÑA 2: GRUPOS ---
@@ -395,10 +392,9 @@ else:
                 st.dataframe(df_grupo)
             idx_col += 1
 
-    # --- PESTAÑA 3: PODIO FINAL (CAMPEÓN, SUB, TERCERO) ---
+    # --- PESTAÑA 3: PODIO FINAL ---
     with app_tabs[2]:
         st.header("👑 Podio del Mundial")
-        st.write("Acierta y gana: Campeón (15 pts), Subcampeón (8 pts), Tercer Lugar (5 pts).")
         m4_cerrado = oficiales.get(4, {}).get('real_result') is not None
         
         try:
@@ -407,10 +403,8 @@ else:
                 mi_campeon = mi_podio_db[0].get('prediction') or "No seleccionado"
                 mi_subcampeon = mi_podio_db[0].get('subcampeon') or "No seleccionado"
                 mi_tercero = mi_podio_db[0].get('tercero') or "No seleccionado"
-            else:
-                mi_campeon = mi_subcampeon = mi_tercero = "No seleccionado"
-        except:
-            mi_campeon = mi_subcampeon = mi_tercero = "No seleccionado"
+            else: mi_campeon = mi_subcampeon = mi_tercero = "No seleccionado"
+        except: mi_campeon = mi_subcampeon = mi_tercero = "No seleccionado"
 
         if campeon_real:
             st.error(f"🏆 Torneo Terminado. Campeón: **{campeon_real}** | Subcampeón: **{subcampeon_real}** | 3ro: **{tercero_real}**")
@@ -420,29 +414,18 @@ else:
             st.info(f"Tus elecciones -> 🥇: {mi_campeon} | 🥈: {mi_subcampeon} | 🥉: {mi_tercero}")
         else:
             c1, c2, c3 = st.columns(3)
-            with c1:
-                st.success(f"🥇 Campeón actual: {mi_campeon}")
-                nuevo_campeon = st.selectbox("Elegir Campeón:", lista_equipos, key="sel_camp")
-            with c2:
-                st.info(f"🥈 Subcampeón actual: {mi_subcampeon}")
-                nuevo_sub = st.selectbox("Elegir Subcampeón:", lista_equipos, key="sel_sub")
-            with c3:
-                st.warning(f"🥉 Tercer lugar actual: {mi_tercero}")
-                nuevo_ter = st.selectbox("Elegir Tercer Lugar:", lista_equipos, key="sel_ter")
+            with c1: nuevo_campeon = st.selectbox("🥇 Elegir Campeón:", lista_equipos)
+            with c2: nuevo_sub = st.selectbox("🥈 Elegir Subcampeón:", lista_equipos)
+            with c3: nuevo_ter = st.selectbox("🥉 Elegir Tercer Lugar:", lista_equipos)
             
             if st.button("Guardar Podio Completo"):
                 st.session_state.confirm_podio = {"camp": nuevo_campeon, "sub": nuevo_sub, "ter": nuevo_ter}
 
             if 'confirm_podio' in st.session_state:
-                st.warning("⚠️ ¿Seguro que quieres guardar este podio? Una vez registrado el Partido 4 no podrás cambiarlo.")
+                st.warning("⚠️ ¿Seguro que quieres guardar este podio? Al cerrar el M4 ya no podrás cambiarlo.")
                 btn1, btn2 = st.columns(2)
                 if btn1.button("✅ Confirmar Podio"):
-                    datos_podio = {
-                        "email": user_email, 
-                        "prediction": st.session_state.confirm_podio["camp"],
-                        "subcampeon": st.session_state.confirm_podio["sub"],
-                        "tercero": st.session_state.confirm_podio["ter"]
-                    }
+                    datos_podio = {"email": user_email, "prediction": st.session_state.confirm_podio["camp"], "subcampeon": st.session_state.confirm_podio["sub"], "tercero": st.session_state.confirm_podio["ter"]}
                     supabase.table('champion_predictions').upsert(datos_podio).execute()
                     del st.session_state.confirm_podio
                     st.success("¡Podio guardado exitosamente!")
@@ -451,16 +434,19 @@ else:
                     del st.session_state.confirm_podio
                     st.rerun()
 
-    # --- PESTAÑA 4: RANKING ---
+    # --- PESTAÑA 4: RANKING (REGLAS DE DESEMPATE) ---
     with app_tabs[3]:
         st.header("📊 Tabla de Posiciones")
+        st.caption("Criterios de desempate: 1. Acierto de Campeón | 2. Más puntos en Fase de Grupos")
         if st.button("🔄 Actualizar Ranking", type="primary"):
-            usuarios_data = supabase.table('users').select('email', 'username').execute().data
-            if not usuarios_data: st.info("No hay usuarios registrados.")
+            if not email_to_user: st.info("No hay usuarios registrados.")
             else:
-                usuarios = pd.DataFrame(usuarios_data)
+                usuarios = pd.DataFrame(list(email_to_user.items()), columns=['email', 'username'])
                 usuarios['Total'] = 0 
-                preds_data = supabase.table('predictions').select('*').execute().data
+                usuarios['pts_grupos'] = 0
+                usuarios['acerto_campeon'] = 0
+
+                preds_data = [p for l in preds_comunidad.values() for p in l]
                 res_data = supabase.table('results').select('*').execute().data
                 
                 if preds_data and res_data:
@@ -469,9 +455,16 @@ else:
                     if not df_r.empty:
                         cruce = pd.merge(df_p, df_r[['match_id', 'real_result']], on='match_id', how='inner')
                         cruce['puntos'] = cruce.apply(lambda x: 2 if x['prediction'] == x['real_result'] else 0, axis=1)
-                        pts_partidos = cruce.groupby('email')['puntos'].sum().reset_index()
-                        usuarios = pd.merge(usuarios, pts_partidos, on='email', how='left').fillna(0)
+                        cruce['es_grupo'] = cruce['match_id'] <= 72
+                        
+                        # 2. Puntos totales y puntos exclusivos de grupos
+                        pts_totales = cruce.groupby('email')['puntos'].sum().reset_index()
+                        pts_grupos = cruce[cruce['es_grupo']].groupby('email')['puntos'].sum().reset_index().rename(columns={'puntos': 'pts_grupos_calc'})
+                        
+                        usuarios = pd.merge(usuarios, pts_totales, on='email', how='left').fillna(0)
                         usuarios['Total'] += usuarios['puntos']
+                        usuarios = pd.merge(usuarios, pts_grupos, on='email', how='left').fillna(0)
+                        usuarios['pts_grupos'] = usuarios['pts_grupos_calc']
 
                 if campeon_real:
                     camps_data = supabase.table('champion_predictions').select('*').execute().data
@@ -480,12 +473,18 @@ else:
                         df_c['pts_camp'] = df_c['prediction'].apply(lambda x: 15 if x == campeon_real else 0)
                         df_c['pts_sub'] = df_c['subcampeon'].apply(lambda x: 8 if str(x) == str(subcampeon_real) else 0)
                         df_c['pts_ter'] = df_c['tercero'].apply(lambda x: 5 if str(x) == str(tercero_real) else 0)
+                        df_c['acerto_campeon'] = df_c['prediction'].apply(lambda x: 1 if x == campeon_real else 0)
                         
                         df_c['pts_podio'] = df_c['pts_camp'] + df_c['pts_sub'] + df_c['pts_ter']
-                        usuarios = pd.merge(usuarios, df_c[['email', 'pts_podio']], on='email', how='left').fillna(0)
+                        usuarios = pd.merge(usuarios, df_c[['email', 'pts_podio', 'acerto_campeon']], on='email', how='left').fillna(0)
                         usuarios['Total'] += usuarios['pts_podio']
+                        usuarios['acerto_campeon'] = usuarios['acerto_campeon_y'] if 'acerto_campeon_y' in usuarios.columns else 0
 
-                ranking_final = usuarios[['username', 'Total']].sort_values(by='Total', ascending=False).reset_index(drop=True)
+                # ORDEN ESTRICTO: Total -> Campeón (1=Sí) -> Puntos en Fase de Grupos
+                ranking_final = usuarios[['username', 'Total', 'acerto_campeon', 'pts_grupos']].sort_values(
+                    by=['Total', 'acerto_campeon', 'pts_grupos'], ascending=[False, False, False]
+                ).reset_index(drop=True)
+                
                 ranking_final['Total'] = ranking_final['Total'].astype(int)
                 
                 def add_medals(row):
@@ -499,7 +498,7 @@ else:
                     ranking_final.index += 1
                 st.dataframe(ranking_final[['username', 'Total']], use_container_width=True)
 
-    # --- PESTAÑA 5: ADMIN ---
+    # --- PESTAÑA 5: ADMIN (CON TABLA DE TERCEROS) ---
     if es_admin:
         with app_tabs[4]:
             st.error("🚨 PANEL DE ADMINISTRADOR 🚨")
@@ -538,32 +537,43 @@ else:
             resultado_admin = st.selectbox("¿Quién ganó la apuesta?", res_opciones, index=res_opciones.index(res_guardado), key=f"res_{m_id_admin}")
             
             if st.button("Guardar Partido"):
-                data = {
-                    "match_id": m_id_admin, "equipo_a": eq_a_admin, "equipo_b": eq_b_admin,
-                    "marcador_a": marc_a, "marcador_b": marc_b,
-                    "real_result": None if resultado_admin == "Pendiente" else resultado_admin
-                }
+                data = {"match_id": m_id_admin, "equipo_a": eq_a_admin, "equipo_b": eq_b_admin, "marcador_a": marc_a, "marcador_b": marc_b, "real_result": None if resultado_admin == "Pendiente" else resultado_admin}
                 supabase.table('results').upsert(data).execute()
                 st.success("Partido actualizado.")
                 st.rerun()
             
             st.divider()
+            
+            # --- 4. Tabla Clasificatoria de Terceros ---
+            st.subheader("📋 Tabla de Mejores Terceros (Top 8 Avanzan)")
+            terceros = []
+            for g, tabla in tablas_posiciones.items():
+                equipos = list(tabla.keys())
+                if len(equipos) >= 3:
+                    eq = equipos[2]
+                    stats = tabla[eq]
+                    if stats['PJ'] > 0: # Solo mostrar si ya jugaron
+                        terceros.append({"Grupo": g, "Equipo": eq, "PTS": stats['PTS'], "DIF": stats['DIF'], "GF": stats['GF']})
+            
+            if terceros:
+                df_terceros = pd.DataFrame(terceros)
+                df_terceros = df_terceros.sort_values(by=['PTS', 'DIF', 'GF'], ascending=[False, False, False]).reset_index(drop=True)
+                df_terceros.index += 1
+                # Estilo visual para los 8 clasificados
+                def highlight_top8(s): return ['background-color: #2E8B57' if s.name <= 8 else '' for v in s]
+                st.dataframe(df_terceros.style.apply(highlight_top8, axis=1), use_container_width=True)
+                st.caption("Verde = Los 8 mejores posicionados para llenar las llaves de Dieciseisavos.")
+            else: st.info("No hay datos de terceros lugares todavía.")
+            
+            st.divider()
             st.subheader("2. Finalizar Torneo (Repartir Puntos Globales)")
             c_camp, c_sub, c_ter = st.columns(3)
-            with c_camp:
-                camp_oficial = st.selectbox("🥇 Campeón Oficial:", ["Ninguno (Torneo Activo)"] + lista_equipos)
-            with c_sub:
-                sub_oficial = st.selectbox("🥈 Subcampeón Oficial:", ["Ninguno (Torneo Activo)"] + lista_equipos)
-            with c_ter:
-                ter_oficial = st.selectbox("🥉 Tercer Lugar Oficial:", ["Ninguno (Torneo Activo)"] + lista_equipos)
+            with c_camp: camp_oficial = st.selectbox("🥇 Campeón Oficial:", ["Ninguno (Torneo Activo)"] + lista_equipos)
+            with c_sub: sub_oficial = st.selectbox("🥈 Subcampeón Oficial:", ["Ninguno (Torneo Activo)"] + lista_equipos)
+            with c_ter: ter_oficial = st.selectbox("🥉 Tercer Lugar Oficial:", ["Ninguno (Torneo Activo)"] + lista_equipos)
                 
             if st.button("Establecer Podio Global"):
-                data_torneo = {
-                    "id": 1, 
-                    "actual_champion": None if camp_oficial == "Ninguno (Torneo Activo)" else camp_oficial,
-                    "actual_subcampeon": None if sub_oficial == "Ninguno (Torneo Activo)" else sub_oficial,
-                    "actual_tercero": None if ter_oficial == "Ninguno (Torneo Activo)" else ter_oficial
-                }
+                data_torneo = {"id": 1, "actual_champion": None if camp_oficial == "Ninguno (Torneo Activo)" else camp_oficial, "actual_subcampeon": None if sub_oficial == "Ninguno (Torneo Activo)" else sub_oficial, "actual_tercero": None if ter_oficial == "Ninguno (Torneo Activo)" else ter_oficial}
                 supabase.table('tournament_settings').upsert(data_torneo).execute()
                 st.success("Configuración de Podio Oficial guardada.")
                 st.rerun()
