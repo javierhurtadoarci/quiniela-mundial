@@ -19,6 +19,9 @@ supabase: Client = init_connection()
 def get_cookie_manager():
     return stx.CookieManager(key="cookie_manager")
 
+# ¡AQUÍ ESTÁ LA LÍNEA QUE FALTABA!
+cookie_manager = get_cookie_manager()
+
 # --- CONFIGURACIÓN DE EQUIPOS Y GRUPOS ---
 flag_ing = "\U0001F3F4\U000E0067\U000E0062\U000E0065\U000E006E\U000E0067\U000E007F"
 flag_sct = "\U0001F3F4\U000E0067\U000E0062\U000E0073\U000E0063\U000E0074\U000E007F"
@@ -330,7 +333,6 @@ else:
     with app_tabs[0]:
         st.header("Tus Pronósticos")
         
-        # Filtro Desplegable con "Todos los partidos" como primera opción
         fase_seleccionada = st.selectbox("📌 Filtrar Partidos por:", 
             ["Todos los partidos (M1 - M104)", "Jornada 1 (M1 - M24)", "Jornada 2 (M25 - M48)", "Jornada 3 (M49 - M72)", 
              "Dieciseisavos (M73 - M88)", "Octavos (M89 - M96)", "Cuartos (M97 - M100)", "Semifinales y Final (M101 - M104)"])
