@@ -14,8 +14,11 @@ def init_connection():
 
 supabase: Client = init_connection()
 
-# --- MANEJADOR DE COOKIES (NATIVO Y SIN CACHÉ PARA EVITAR ERRORES) ---
+# --- MANEJADOR DE COOKIES ---
 cookie_manager = stx.CookieManager(key="cookie_manager")
+
+# --- CORREO DEL ADMINISTRADOR GLOBAL ---
+ADMIN_EMAIL = "adam666.die@gmail.com"
 
 # --- CONFIGURACIÓN DE EQUIPOS Y GRUPOS ---
 flag_ing = "\U0001F3F4\U000E0067\U000E0062\U000E0065\U000E006E\U000E0067\U000E007F"
@@ -276,6 +279,8 @@ if st.session_state.user is None:
 # --- APLICACIÓN PRINCIPAL ---
 else:
     user_email = st.session_state.user.email
+    es_admin = user_email == ADMIN_EMAIL
+    
     try:
         usuarios_db = supabase.table('users').select('email', 'username').execute().data
         email_to_user = {u['email']: u['username'] for u in usuarios_db} if usuarios_db else {}
@@ -305,7 +310,9 @@ else:
         todas_preds_db = supabase.table('predictions').select('*').execute().data
         preds_comunidad = {}
         for p in todas_preds_db:
-            preds_comunidad.setdefault(p['match_id'], []).append(p)
+            # FILTRO: IGNORAR AL ADMIN EN LAS ESTADÍSTICAS COMUNITARIAS
+            if p['email'] != ADMIN_EMAIL:
+                preds_comunidad.setdefault(p['match_id'], []).append(p)
     except:
         oficiales = {}
         preds_comunidad = {}
@@ -313,7 +320,6 @@ else:
 
     tablas_posiciones = calcular_posiciones_grupos(oficiales)
     
-    es_admin = user_email == "adam666.die@gmail.com"
     tabs = ["📝 Pronósticos", "🏆 Grupos", "👑 Podio Final", "📊 Ranking"]
     if es_admin: tabs.append("⚙️ Panel Admin")
 
@@ -341,7 +347,12 @@ else:
         elif "Cuartos" in fase_seleccionada: matches_filtrados = [m for m in matches if 97 <= m['id'] <= 100]
         elif "Semifinales" in fase_seleccionada: matches_filtrados = [m for m in matches if m['id'] >= 101]
 
-        mis_preds_exactas = {p['match_id']: p['prediction'] for lst in preds_comunidad.values() for p in lst if p['email'] == user_email} if preds_comunidad else {}
+        # Obtenemos los pronósticos directos de la BD, no solo de la comunidad (para que el Admin pueda probar UI)
+        try:
+            mis_preds_db = supabase.table('predictions').select('match_id', 'prediction').eq('email', user_email).execute().data
+            mis_preds_exactas = {p['match_id']: p['prediction'] for p in mis_preds_db}
+        except:
+            mis_preds_exactas = {}
 
         for match in matches_filtrados:
             m_id = match['id']
@@ -366,11 +377,9 @@ else:
                     st.radio(f"Gana M{m_id}", opciones, index=idx, key=f"p_{m_id}", horizontal=True, disabled=True, label_visibility="collapsed")
                     st.write(f"Tu pronóstico guardado: **{voto_crudo if voto_crudo else 'Ninguno'}**")
                 else:
-                    # LÓGICA DE EDICIÓN: El partido aún no se juega ni el admin le ha puesto marcador
                     edit_mode = st.session_state.get(f"edit_{m_id}", False)
                     
                     if voto_crudo and not edit_mode:
-                        # Ya votó y no está editando (Vista Segura)
                         st.markdown(f"### {eq_a} vs {eq_b}")
                         col_msg, col_btn = st.columns([3, 1])
                         with col_msg:
@@ -380,7 +389,6 @@ else:
                                 st.session_state[f"edit_{m_id}"] = True
                                 st.rerun()
                     else:
-                        # Modo Edición o Primer Voto
                         st.markdown(f"### {eq_a} vs {eq_b}")
                         seleccion = st.radio(f"Gana M{m_id}", opciones, index=idx, key=f"p_{m_id}", horizontal=True, label_visibility="collapsed")
                         
@@ -398,7 +406,6 @@ else:
                                     st.session_state[f"edit_{m_id}"] = False
                                     st.rerun()
                 
-                # Estadísticas globales (solo si el partido está bloqueado o finalizado)
                 if partido_bloqueado or resultado_oficial:
                     apuestas_partido = preds_comunidad.get(m_id, [])
                     total_apuestas = len(apuestas_partido)
@@ -415,7 +422,7 @@ else:
                         if resultado_oficial and resultado_oficial != "Pendiente":
                             ganadores = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == resultado_oficial]
                             if ganadores: st.success(f"🎯 Acertaron: {', '.join(ganadores)}")
-                            else: st.error("Nadie acertó a este partido.")
+                            else: st.error("Ningún usuario acertó a este partido.")
                 st.divider()
 
     # --- PESTAÑA 2: GRUPOS ---
@@ -477,9 +484,13 @@ else:
         st.header("📊 Tabla de Posiciones")
         st.caption("Criterios de desempate: 1. Acierto de Campeón | 2. Más puntos en Fase de Grupos")
         if st.button("🔄 Actualizar Ranking", type="primary"):
-            if not email_to_user: st.info("No hay usuarios registrados.")
+            
+            # FILTRO: IGNORAR AL ADMIN EN EL RANKING
+            usuarios_lista_filtrada = {e: u for e, u in email_to_user.items() if e != ADMIN_EMAIL}
+            
+            if not usuarios_lista_filtrada: st.info("No hay usuarios competidores registrados.")
             else:
-                usuarios = pd.DataFrame(list(email_to_user.items()), columns=['email', 'username'])
+                usuarios = pd.DataFrame(list(usuarios_lista_filtrada.items()), columns=['email', 'username'])
                 usuarios['Total'] = 0 
                 usuarios['pts_grupos'] = 0
                 usuarios['acerto_campeon'] = 0
@@ -580,7 +591,6 @@ else:
             
             st.divider()
             
-            # --- Tabla Clasificatoria de Terceros ---
             st.subheader("📋 Tabla de Mejores Terceros (Top 8 Avanzan a 16vos)")
             terceros = []
             for g, tabla in tablas_posiciones.items():
