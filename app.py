@@ -228,7 +228,6 @@ def convertir_hora(fecha_base_str, timezone_destino):
 # --- SISTEMA DE AUTENTICACIÓN ---
 if 'user' not in st.session_state: st.session_state.user = None
 
-# --- RECUPERAR SESIÓN DESDE LAS COOKIES ---
 if st.session_state.user is None:
     auth_cookie = cookie_manager.get(cookie="sb_auth_token")
     if auth_cookie and type(auth_cookie) == str and '|' in auth_cookie:
@@ -367,14 +366,39 @@ else:
                     st.radio(f"Gana M{m_id}", opciones, index=idx, key=f"p_{m_id}", horizontal=True, disabled=True, label_visibility="collapsed")
                     st.write(f"Tu pronóstico guardado: **{voto_crudo if voto_crudo else 'Ninguno'}**")
                 else:
-                    st.markdown(f"### {eq_a} vs {eq_b}")
-                    seleccion = st.radio(f"Gana M{m_id}", opciones, index=idx, key=f"p_{m_id}", horizontal=True, label_visibility="collapsed")
-                    if st.button("Guardar Pronóstico", key=f"b_{m_id}"):
-                        data_pronostico = {"email": user_email, "match_id": m_id, "prediction": seleccion}
-                        supabase.table('predictions').upsert(data_pronostico, on_conflict="email,match_id").execute()
-                        st.toast(f"M{m_id} Guardado", icon="✅")
-                        st.rerun()
+                    # LÓGICA DE EDICIÓN: El partido aún no se juega ni el admin le ha puesto marcador
+                    edit_mode = st.session_state.get(f"edit_{m_id}", False)
+                    
+                    if voto_crudo and not edit_mode:
+                        # Ya votó y no está editando (Vista Segura)
+                        st.markdown(f"### {eq_a} vs {eq_b}")
+                        col_msg, col_btn = st.columns([3, 1])
+                        with col_msg:
+                            st.success(f"✅ Guardado: **{voto_crudo}**")
+                        with col_btn:
+                            if st.button("✏️ Editar", key=f"btn_edit_{m_id}"):
+                                st.session_state[f"edit_{m_id}"] = True
+                                st.rerun()
+                    else:
+                        # Modo Edición o Primer Voto
+                        st.markdown(f"### {eq_a} vs {eq_b}")
+                        seleccion = st.radio(f"Gana M{m_id}", opciones, index=idx, key=f"p_{m_id}", horizontal=True, label_visibility="collapsed")
+                        
+                        col_btn1, col_btn2 = st.columns([1, 4])
+                        with col_btn1:
+                            if st.button("💾 Guardar", key=f"btn_save_{m_id}"):
+                                data_pronostico = {"email": user_email, "match_id": m_id, "prediction": seleccion}
+                                supabase.table('predictions').upsert(data_pronostico, on_conflict="email,match_id").execute()
+                                st.session_state[f"edit_{m_id}"] = False
+                                st.toast(f"Pronóstico M{m_id} guardado", icon="✅")
+                                st.rerun()
+                        with col_btn2:
+                            if voto_crudo and edit_mode:
+                                if st.button("❌ Cancelar", key=f"btn_cancel_{m_id}"):
+                                    st.session_state[f"edit_{m_id}"] = False
+                                    st.rerun()
                 
+                # Estadísticas globales (solo si el partido está bloqueado o finalizado)
                 if partido_bloqueado or resultado_oficial:
                     apuestas_partido = preds_comunidad.get(m_id, [])
                     total_apuestas = len(apuestas_partido)
