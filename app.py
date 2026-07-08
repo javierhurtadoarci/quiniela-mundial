@@ -419,6 +419,24 @@ else:
                         st.progress(votos_e / total_apuestas if total_apuestas else 0, text=f"Empate ({int(votos_e/total_apuestas*100)}%)")
                         st.progress(votos_b / total_apuestas if total_apuestas else 0, text=f"{eq_b} ({int(votos_b/total_apuestas*100)}%)")
                         
+                        # --- NUEVO: DESPLEGABLE PARA VER QUIÉN VOTÓ POR QUIÉN ---
+                        with st.expander("👁️ Ver quién votó por cada equipo"):
+                            votantes_a = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == eq_a]
+                            votantes_e = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == "Empate"]
+                            votantes_b = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == eq_b]
+
+                            col_va, col_ve, col_vb = st.columns(3)
+                            with col_va:
+                                st.markdown(f"**{eq_a}**")
+                                for v in votantes_a: st.caption(f"👤 {v}")
+                            with col_ve:
+                                st.markdown("**Empate**")
+                                for v in votantes_e: st.caption(f"👤 {v}")
+                            with col_vb:
+                                st.markdown(f"**{eq_b}**")
+                                for v in votantes_b: st.caption(f"👤 {v}")
+                        # --------------------------------------------------------
+
                         if resultado_oficial and resultado_oficial != "Pendiente":
                             ganadores = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == resultado_oficial]
                             if ganadores: st.success(f"🎯 Acertaron: {', '.join(ganadores)}")
