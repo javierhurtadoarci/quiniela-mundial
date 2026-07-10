@@ -307,10 +307,10 @@ else:
         subcampeon_real = torneo_db[0].get('actual_subcampeon') if torneo_db else None
         tercero_real = torneo_db[0].get('actual_tercero') if torneo_db else None
         
+        # AUMENTADO A 10000 PARA EVITAR QUE SE CORTEN LOS PUNTOS DE LOS USUARIOS
         todas_preds_db = supabase.table('predictions').select('*').limit(10000).execute().data
         preds_comunidad = {}
         for p in todas_preds_db:
-            # FILTRO: IGNORAR AL ADMIN EN LAS ESTADÍSTICAS COMUNITARIAS
             if p['email'] != ADMIN_EMAIL:
                 preds_comunidad.setdefault(p['match_id'], []).append(p)
     except:
@@ -347,7 +347,6 @@ else:
         elif "Cuartos" in fase_seleccionada: matches_filtrados = [m for m in matches if 97 <= m['id'] <= 100]
         elif "Semifinales" in fase_seleccionada: matches_filtrados = [m for m in matches if m['id'] >= 101]
 
-        # Obtenemos los pronósticos directos de la BD, no solo de la comunidad (para que el Admin pueda probar UI)
         try:
             mis_preds_db = supabase.table('predictions').select('match_id', 'prediction').eq('email', user_email).execute().data
             mis_preds_exactas = {p['match_id']: p['prediction'] for p in mis_preds_db}
@@ -406,41 +405,40 @@ else:
                                     st.session_state[f"edit_{m_id}"] = False
                                     st.rerun()
                 
-                if partido_bloqueado or resultado_oficial:
-                    apuestas_partido = preds_comunidad.get(m_id, [])
-                    total_apuestas = len(apuestas_partido)
-                    if total_apuestas > 0:
-                        votos_a = sum(1 for p in apuestas_partido if p['prediction'] == eq_a)
-                        votos_e = sum(1 for p in apuestas_partido if p['prediction'] == "Empate")
-                        votos_b = sum(1 for p in apuestas_partido if p['prediction'] == eq_b)
-                        
-                        st.caption(f"📊 **Estadísticas de la Comunidad:** ({total_apuestas} votos)")
-                        st.progress(votos_a / total_apuestas if total_apuestas else 0, text=f"{eq_a} ({int(votos_a/total_apuestas*100)}%)")
-                        st.progress(votos_e / total_apuestas if total_apuestas else 0, text=f"Empate ({int(votos_e/total_apuestas*100)}%)")
-                        st.progress(votos_b / total_apuestas if total_apuestas else 0, text=f"{eq_b} ({int(votos_b/total_apuestas*100)}%)")
-                        
-                        # --- NUEVO: DESPLEGABLE PARA VER QUIÉN VOTÓ POR QUIÉN ---
-                        with st.expander("👁️ Ver quién votó por cada equipo"):
-                            votantes_a = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == eq_a]
-                            votantes_e = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == "Empate"]
-                            votantes_b = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == eq_b]
+                # --- ESTADÍSTICAS Y VOTOS VISIBLES EN TODO MOMENTO ---
+                apuestas_partido = preds_comunidad.get(m_id, [])
+                total_apuestas = len(apuestas_partido)
+                if total_apuestas > 0:
+                    votos_a = sum(1 for p in apuestas_partido if p['prediction'] == eq_a)
+                    votos_e = sum(1 for p in apuestas_partido if p['prediction'] == "Empate")
+                    votos_b = sum(1 for p in apuestas_partido if p['prediction'] == eq_b)
+                    
+                    st.caption(f"📊 **Estadísticas de la Comunidad:** ({total_apuestas} votos)")
+                    st.progress(votos_a / total_apuestas if total_apuestas else 0, text=f"{eq_a} ({int(votos_a/total_apuestas*100)}%)")
+                    st.progress(votos_e / total_apuestas if total_apuestas else 0, text=f"Empate ({int(votos_e/total_apuestas*100)}%)")
+                    st.progress(votos_b / total_apuestas if total_apuestas else 0, text=f"{eq_b} ({int(votos_b/total_apuestas*100)}%)")
+                    
+                    with st.expander("👁️ Ver quién votó por cada equipo"):
+                        votantes_a = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == eq_a]
+                        votantes_e = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == "Empate"]
+                        votantes_b = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == eq_b]
 
-                            col_va, col_ve, col_vb = st.columns(3)
-                            with col_va:
-                                st.markdown(f"**{eq_a}**")
-                                for v in votantes_a: st.caption(f"👤 {v}")
-                            with col_ve:
-                                st.markdown("**Empate**")
-                                for v in votantes_e: st.caption(f"👤 {v}")
-                            with col_vb:
-                                st.markdown(f"**{eq_b}**")
-                                for v in votantes_b: st.caption(f"👤 {v}")
-                        # --------------------------------------------------------
+                        col_va, col_ve, col_vb = st.columns(3)
+                        with col_va:
+                            st.markdown(f"**{eq_a}**")
+                            for v in votantes_a: st.caption(f"👤 {v}")
+                        with col_ve:
+                            st.markdown("**Empate**")
+                            for v in votantes_e: st.caption(f"👤 {v}")
+                        with col_vb:
+                            st.markdown(f"**{eq_b}**")
+                            for v in votantes_b: st.caption(f"👤 {v}")
 
-                        if resultado_oficial and resultado_oficial != "Pendiente":
-                            ganadores = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == resultado_oficial]
-                            if ganadores: st.success(f"🎯 Acertaron: {', '.join(ganadores)}")
-                            else: st.error("Ningún usuario acertó a este partido.")
+                    if resultado_oficial and resultado_oficial != "Pendiente":
+                        ganadores = [email_to_user.get(p['email'], 'Usuario') for p in apuestas_partido if p['prediction'] == resultado_oficial]
+                        if ganadores: st.success(f"🎯 Acertaron: {', '.join(ganadores)}")
+                        else: st.error("Ningún usuario acertó a este partido.")
+                
                 st.divider()
 
     # --- PESTAÑA 2: GRUPOS ---
@@ -497,13 +495,55 @@ else:
                     del st.session_state.confirm_podio
                     st.rerun()
 
+        # --- NUEVO: TENDENCIAS DE LA COMUNIDAD EN EL PODIO ---
+        st.divider()
+        st.subheader("📊 ¿Quién votó por quién? (Comunidad)")
+        
+        try:
+            todos_podios = supabase.table('champion_predictions').select('*').execute().data
+            # Filtramos al admin para no ensuciar datos
+            todos_podios = [p for p in todos_podios if p['email'] != ADMIN_EMAIL]
+            
+            if todos_podios:
+                camp_dict, sub_dict, ter_dict = {}, {}, {}
+                for p in todos_podios:
+                    usr = email_to_user.get(p['email'], "Usuario")
+                    c, s, t = p.get('prediction'), p.get('subcampeon'), p.get('tercero')
+                    
+                    if c: camp_dict.setdefault(c, []).append(usr)
+                    if s: sub_dict.setdefault(s, []).append(usr)
+                    if t: ter_dict.setdefault(t, []).append(usr)
+                
+                col_c, col_s, col_t = st.columns(3)
+                
+                with col_c:
+                    st.markdown("🥇 **Campeón**")
+                    for pais, users in sorted(camp_dict.items(), key=lambda item: len(item[1]), reverse=True):
+                        with st.expander(f"{pais} ({len(users)} votos)"):
+                            for u in users: st.caption(f"👤 {u}")
+                
+                with col_s:
+                    st.markdown("🥈 **Subcampeón**")
+                    for pais, users in sorted(sub_dict.items(), key=lambda item: len(item[1]), reverse=True):
+                        with st.expander(f"{pais} ({len(users)} votos)"):
+                            for u in users: st.caption(f"👤 {u}")
+                
+                with col_t:
+                    st.markdown("🥉 **Tercer Lugar**")
+                    for pais, users in sorted(ter_dict.items(), key=lambda item: len(item[1]), reverse=True):
+                        with st.expander(f"{pais} ({len(users)} votos)"):
+                            for u in users: st.caption(f"👤 {u}")
+            else:
+                st.info("Aún no hay votos registrados para el podio de la comunidad.")
+        except Exception as e:
+            st.error("No se pudieron cargar las tendencias de la comunidad.")
+
     # --- PESTAÑA 4: RANKING ---
     with app_tabs[3]:
         st.header("📊 Tabla de Posiciones")
         st.caption("Criterios de desempate: 1. Acierto de Campeón | 2. Más puntos en Fase de Grupos")
         if st.button("🔄 Actualizar Ranking", type="primary"):
             
-            # FILTRO: IGNORAR AL ADMIN EN EL RANKING
             usuarios_lista_filtrada = {e: u for e, u in email_to_user.items() if e != ADMIN_EMAIL}
             
             if not usuarios_lista_filtrada: st.info("No hay usuarios competidores registrados.")
