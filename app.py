@@ -307,7 +307,7 @@ else:
         subcampeon_real = torneo_db[0].get('actual_subcampeon') if torneo_db else None
         tercero_real = torneo_db[0].get('actual_tercero') if torneo_db else None
         
-        todas_preds_db = supabase.table('predictions').select('*').execute().data
+        todas_preds_db = supabase.table('predictions').select('*').limit(10000).execute().data
         preds_comunidad = {}
         for p in todas_preds_db:
             # FILTRO: IGNORAR AL ADMIN EN LAS ESTADÍSTICAS COMUNITARIAS
